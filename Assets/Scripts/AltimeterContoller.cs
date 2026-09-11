@@ -2,28 +2,6 @@
 //
 // Generates a complete A320-style Primary Flight Display entirely at runtime - no manually
 // created UI objects required. Attach to any empty GameObject and press Play.
-//
-// Everything (Canvas, attitude indicator with sky/ground/horizon/pitch ladder, roll scale,
-// fixed aircraft symbol, speed tape, altitude tape, heading tape, vertical speed indicator,
-// flight director bars, localizer/glideslope diamonds, and A320-style labels) is built once and
-// then driven every frame purely by updating cached RectTransform/Text references - no
-// hierarchy searches, no per-frame instantiation.
-//
-// PERSISTING THE GENERATED UI: pressing Play and letting Awake() generate it is a temporary
-// PREVIEW only - Unity always discards anything created during Play Mode the moment Play stops,
-// and no script can override that. To make the generated PFD a permanent part of the scene that
-// you can hand-edit afterward, use this component's context menu (gear icon in the Inspector, or
-// right-click the component header) -> "Bake PFD To Scene", while NOT in Play Mode. That builds
-// the exact same hierarchy directly into the Edit Mode scene (fully Undo-able), marks the scene
-// dirty, and sets Is Baked so this component will never regenerate or touch it again - from then
-// on the generated Canvas/Text/Image objects are ordinary scene objects you can reposition,
-// resize, or restyle by hand like anything else.
-//
-// ROLL CONVENTION (per spec): Roll Input +1 -> Aircraft Roll +30 deg (rolling right) ->
-// Horizon Rotation -30 deg (horizon visually tilts left under the fixed aircraft symbol).
-// Aircraft Roll and Horizon Rotation are always exact negatives of each other; only the
-// AIRCRAFT ROLL value is smoothed (via Mathf.SmoothDampAngle), and Horizon Rotation is derived
-// from it every frame, so both stay perfectly in sync with the same smoothing curve.
 
 using UnityEngine;
 using UnityEngine.UI;
@@ -43,42 +21,37 @@ public class A320PFD : MonoBehaviour
     // Inspector - Flight Data
     // ==================================================
     [Header("Flight Data")]
-    [Tooltip("Baseline/commanded airspeed. This value is never modified by the script - what the tape actually shows is this plus a bounded roll-reaction offset (see Speed Dynamics below), so this number always stays exactly what you typed.")]
+    [Tooltip("Baseline/commanded airspeed. What the tape shows is this plus a bounded roll-reaction offset.")]
     public float speed = 140f;
-    [Tooltip("Baseline/commanded altitude. This value is never modified by the script - what the tape actually shows is this plus Vertical Speed's effect (if enabled) plus a bounded roll-reaction offset (see Altitude Dynamics below), so this number always stays exactly what you typed instead of drifting on its own.")]
+    [Tooltip("Baseline/commanded altitude. What the tape shows is this plus a bounded roll-reaction offset.")]
     public float altitude = 5000f;
     [Range(0f, 359.99f)] public float heading = 270f;
-    [Tooltip("Defaults to 0 so Altitude holds still until you actively command a climb/descent - set this away from 0 (with Auto Altitude From VS on below) to make the aircraft actually climb or descend, exactly like a real aircraft: altitude only changes because vertical speed is nonzero, not on its own.")]
-    public float verticalSpeed = 0f;
 
-    [Tooltip("When on, Heading is no longer a free value you set directly - holding a bank angle continuously turns the aircraft, exactly like a real coordinated turn (rate of turn depends on both bank angle and airspeed). Turn off to control Heading manually again, e.g. for testing the heading tape in isolation.")]
+    [Tooltip("When on, Heading is no longer a free value you set directly - holding a bank angle continuously turns the aircraft.")]
     public bool autoTurnWithRoll = true;
 
     [Header("Speed Dynamics")]
-    [Tooltip("When on, the displayed speed is Speed above plus a bounded offset that follows Roll Input's sign and magnitude directly: rolling toward +1 pushes speed up toward Speed + Speed Roll Deviation, rolling toward -1 pushes it down toward Speed - Speed Roll Deviation, and it settles back to exactly Speed at Roll Input 0. The offset can never exceed +/- Speed Roll Deviation, however long you hold the roll.")]
+    [Tooltip("When on, displayed speed includes a bounded offset based on Roll Input.")]
     public bool speedReactsToRoll = true;
 
     [Tooltip("Maximum speed deviation (knots) in either direction, reached at full +/-1 Roll Input.")]
     [Min(0f)] public float speedRollDeviation = 15f;
 
     [Header("Altitude Dynamics")]
-    [Tooltip("When on, the displayed altitude is the running baseline (Altitude above, advanced over time by Vertical Speed if Auto Altitude From VS is on) plus a bounded offset that follows Roll Input's sign and magnitude directly, the same way Speed Dynamics works above.")]
+    [Tooltip("When on, displayed altitude includes a bounded offset based on Roll Input.")]
     public bool altitudeReactsToRoll = true;
 
     [Tooltip("Maximum altitude deviation (feet) in either direction, reached at full +/-1 Roll Input.")]
     [Min(0f)] public float altitudeRollDeviation = 10f;
 
-    [Tooltip("When on, the altitude baseline continuously integrates Vertical Speed over time, exactly like a real aircraft (altitude IS the running total of climb/descent rate, not an independent number). With Vertical Speed at 0 (the default) the baseline simply holds still - it only moves once you actively dial in a climb/descent rate. Turn off to keep the baseline pinned exactly to the Altitude field above (e.g. for testing the altitude tape/roll deviation in isolation).")]
-    public bool autoAltitudeFromVS = true;
-
     [Header("Pitch Dynamics")]
-    [Tooltip("When on, the attitude indicator's horizon visibly moves up/down (a real pitch-up/pitch-down movement, not just the roll rotation) driven by the altitude tape's own actual current climb/descent RATE - whatever is causing altitude to move (roll reaction, Vertical Speed integration, or you typing a new Altitude directly) makes the horizon react, since pitch reads altitude's behavior rather than reading Roll Input directly.")]
+    [Tooltip("When on, the attitude indicator's horizon visibly moves up/down driven by altitude's actual current climb/descent RATE.")]
     public bool pitchReactsToAltitude = true;
 
     [Tooltip("Maximum visible pitch (degrees), reached once altitude is changing at Pitch Rate Reference (ft/min) or faster.")]
     [Min(0f)] public float maxPitchDegrees = 15f;
 
-    [Tooltip("Climb/descent rate (ft/min) that produces the full Max Pitch Degrees. Smaller = pitch reaches its max sooner (more sensitive); larger = a faster climb/descent is needed before pitch maxes out.")]
+    [Tooltip("Climb/descent rate (ft/min) that produces the full Max Pitch Degrees.")]
     [Min(1f)] public float pitchRateReference = 1000f;
 
     // ==================================================
@@ -92,7 +65,6 @@ public class A320PFD : MonoBehaviour
     // Inspector - Display Settings
     // ==================================================
     [Header("Parent / Container")]
-    [Tooltip("Leave empty to generate a full-screen overlay Canvas (default, previous behavior). Assign a RectTransform (e.g. a panel already under an existing Canvas) to generate the PFD as a child of it instead - no new Canvas is created, and everything is clipped strictly to its own bounds so it can never draw outside that parent.")]
     [SerializeField] private RectTransform parentContainer;
 
     [Header("Display Settings")]
@@ -105,32 +77,20 @@ public class A320PFD : MonoBehaviour
     public Color magentaColor = new Color(0.92f, 0.10f, 0.80f);
 
     [Header("Text Sizes")]
-    [Tooltip("SPD/ALT/HDG/V-S/LOC/GS/FD/AP/CAT3/DUAL/QNH header labels.")]
     [Min(1)] public int headerLabelFontSize = 15;
-    [Tooltip("Scrolling numbers on the speed/altitude/heading tapes.")]
     [Min(1)] public int tapeLabelFontSize = 20;
-    [Tooltip("The highlighted current-value box on the speed/altitude/heading tapes.")]
     [Min(1)] public int valueBoxFontSize = 24;
-    [Tooltip("Pitch ladder numbers (10/20/30) inside the attitude indicator.")]
     [Min(1)] public int pitchLadderFontSize = 16;
-    [Tooltip("Roll scale numbers (10/20/30/45/60) above the attitude indicator.")]
     [Min(1)] public int rollScaleFontSize = 13;
-    [Tooltip("Numbers on the vertical speed indicator's fixed scale.")]
-    [Min(1)] public int vsiScaleFontSize = 13;
-    [Tooltip("The numeric vertical speed readout (e.g. +500) below the VSI.")]
-    [Min(1)] public int vsiValueFontSize = 16;
 
     // ==================================================
     // Bake state
     // ==================================================
     [Header("Bake")]
-    [Tooltip("True once this PFD has been baked into permanent scene objects (via the 'Bake PFD To Scene' context menu action, in Edit Mode). While true, this component will never regenerate/rebuild the hierarchy - it only drives the existing baked objects using the reference fields below, which Unity serializes normally like any other Inspector reference. Runtime-only Play Mode testing (no bake) still works exactly as before and is discarded on Stop, same as any other Unity behavior - that discard-on-stop is a Unity engine rule with no script-level workaround, which is exactly why baking has to happen in Edit Mode.")]
     [SerializeField] private bool isBaked = false;
 
     // ==================================================
-    // Runtime-generated references (cached, never searched for). [SerializeField] so that once
-    // baked, these keep pointing at the correct scene objects across domain reloads/Play Mode
-    // transitions without ever needing to re-search the hierarchy.
+    // Runtime-generated references
     // ==================================================
     [HideInInspector] [SerializeField] private Canvas canvas;
     [HideInInspector] [SerializeField] private RectTransform pfdRoot;
@@ -142,9 +102,6 @@ public class A320PFD : MonoBehaviour
     [HideInInspector] [SerializeField] private float rollScaleRadius;
     [HideInInspector] [SerializeField] private float pitchPxPerDegree;
 
-    // The attitude indicator (and everything anchored to it: roll scale, LOC, GS) is shifted
-    // down from pfdRoot's center by this much, leaving clear headroom above the sphere for the
-    // roll scale arc so it never overlaps/crowds the top of the pitch ladder.
     private const float AttitudeCenterYOffset = -30f;
 
     // Speed tape
@@ -163,8 +120,6 @@ public class A320PFD : MonoBehaviour
     private const float AltPxPerFoot = 0.3f;
     private const float AltStep = 100f;
 
-    // Reserved horizontal space to the right of the attitude sphere for the glideslope scale,
-    // so the altitude tape/VSI never overlap it.
     private const float GsAreaWidth = 70f;
 
     // Heading tape
@@ -175,19 +130,8 @@ public class A320PFD : MonoBehaviour
     [HideInInspector] [SerializeField] private float headingPxPerDegree;
     private const float HeadingStep = 10f;
 
-    // VSI
-    [HideInInspector] [SerializeField] private RectTransform vsiPointer;
-    [HideInInspector] [SerializeField] private Text vsiValueText;
-    [HideInInspector] [SerializeField] private float vsiScaleHalfHeight;
-    private const float VsiMaxRange = 3000f;
-
-    // Turn dynamics - standard aviation rate-of-turn approximation:
-    // deg/sec = (1091 * tan(bank)) / TAS(knots). This is the same relationship real aircraft
-    // (and real PFDs) follow: a steeper bank turns faster, but the SAME bank turns slower at
-    // higher airspeed - using the existing Speed field as TAS gives physically-consistent
-    // behavior "for free" instead of a made-up constant turn rate.
     private const float TurnRateConstant = 1091f;
-    private const float MinSpeedForTurnRate = 20f; // avoids a divide-by-near-zero blowing up the turn rate at very low/zero speed
+    private const float MinSpeedForTurnRate = 20f;
 
     // FD / LOC / GS
     [HideInInspector] [SerializeField] private RectTransform fdVerticalBar;
@@ -197,27 +141,22 @@ public class A320PFD : MonoBehaviour
     [HideInInspector] [SerializeField] private float locHalfRange;
     [HideInInspector] [SerializeField] private float gsHalfHeight;
 
-    /// <summary>The actual, already-smoothed aircraft roll angle (degrees) this frame - the same value the horizon's rotation and roll pointer are driven from. Exposed so other scripts (e.g. a 3D aircraft model rotator) can match the PFD's attitude exactly instead of independently re-deriving their own roll from the gyro with different scaling/smoothing, which would drift out of sync with what the instrument shows.</summary>
     public float CurrentAircraftRoll => currentAircraftRoll;
 
-    // Smoothing state - serialized too, so a baked PFD's tapes/roll don't reset to 0 and jump
-    // on the next domain reload; harmless to serialize even for non-baked runtime-only use.
+    // Smoothing state
     [HideInInspector] [SerializeField] private float currentAircraftRoll;
     [HideInInspector] [SerializeField] private float rollVelocity;
     [HideInInspector] [SerializeField] private float currentPitch;
     [HideInInspector] [SerializeField] private float pitchVelocity;
     [HideInInspector] [SerializeField] private float previousDisplayAltitude;
     [HideInInspector] [SerializeField] private bool hasPreviousDisplayAltitude;
-    [HideInInspector] [SerializeField] private float actualSpeed; // Speed + the current bounded roll-reaction offset
+    [HideInInspector] [SerializeField] private float actualSpeed;
     [HideInInspector] [SerializeField] private float displaySpeed;
     [HideInInspector] [SerializeField] private float speedVelocity;
-    [HideInInspector] [SerializeField] private float altitudeBaseline; // advances via Vertical Speed; the public Altitude field itself is never touched
     [HideInInspector] [SerializeField] private float displayAltitude;
     [HideInInspector] [SerializeField] private float altVelocity;
     [HideInInspector] [SerializeField] private float displayHeading;
     [HideInInspector] [SerializeField] private float headingVelocity;
-    [HideInInspector] [SerializeField] private float displayVS;
-    [HideInInspector] [SerializeField] private float vsVelocity;
 
     private static Font cachedFont;
 
@@ -227,27 +166,14 @@ public class A320PFD : MonoBehaviour
     private void Awake()
     {
         if (isBaked)
-        {
-            // Already baked (in Edit Mode, or a previous Play session) - pfdRoot and every other
-            // reference field above already point at the existing, permanent scene hierarchy via
-            // normal Unity serialization. Nothing to (re)generate - Update() drives it directly.
             return;
-        }
 
         actualSpeed = speed;
         displaySpeed = speed;
-        altitudeBaseline = altitude;
         displayAltitude = altitude;
         displayHeading = heading;
-        displayVS = verticalSpeed;
 
         BuildPFD();
-
-        // NOTE: this only marks the in-memory Play Mode instance as built, so repeated Awake()
-        // calls within the same session don't double-generate. It does NOT persist past Stop -
-        // Unity always discards anything created during Play when Play Mode ends, with no
-        // script-level way around that. Real persistence requires baking in Edit Mode - see
-        // BakeToScene() below.
         isBaked = true;
     }
 
@@ -259,12 +185,10 @@ public class A320PFD : MonoBehaviour
         UpdateRoll();
         UpdateHeadingFromRoll();
         UpdateSpeedFromRoll();
-        UpdateAltitudeFromVS();
         UpdateSpeedTape();
         UpdateAltitudeTape();
         UpdatePitchFromAltitude();
         UpdateHeadingTape();
-        UpdateVSI();
         UpdateILSAndFD();
     }
 
@@ -274,22 +198,20 @@ public class A320PFD : MonoBehaviour
     {
         if (Application.isPlaying)
         {
-            Debug.LogWarning("[A320PFD] Bake must be run in Edit Mode, not Play Mode - Unity always discards anything created during Play when you stop, with no way around that from a script. Exit Play Mode, then use 'Bake PFD To Scene' again from this component's context menu.", this);
+            Debug.LogWarning("[A320PFD] Bake must be run in Edit Mode, not Play Mode.", this);
             return;
         }
 
         if (isBaked)
         {
-            Debug.LogWarning("[A320PFD] Already baked - this GameObject's PFD is already a permanent part of the scene. If you want to regenerate from scratch, delete the generated hierarchy under it by hand first, then untick Is Baked before baking again.", this);
+            Debug.LogWarning("[A320PFD] Already baked.", this);
             return;
         }
 
         actualSpeed = speed;
         displaySpeed = speed;
-        altitudeBaseline = altitude;
         displayAltitude = altitude;
         displayHeading = heading;
-        displayVS = verticalSpeed;
 
         BuildPFD();
         isBaked = true;
@@ -298,18 +220,15 @@ public class A320PFD : MonoBehaviour
         UnityEditor.EditorUtility.SetDirty(gameObject);
         UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(gameObject.scene);
 
-        Debug.Log("[A320PFD] Baked - the generated PFD is now a permanent part of the scene (Ctrl+S to save it). You can freely edit/reposition/resize any of the generated objects by hand from now on; this component will not regenerate or touch them again.", this);
+        Debug.Log("[A320PFD] Baked successfully.", this);
     }
 #endif
 
     private void OnDestroy()
     {
         if (isBaked)
-            return; // baked objects are a permanent, independent part of the scene now - this
-                     // component no longer owns their lifecycle, even if it's removed/deleted.
+            return;
 
-        // Own-Canvas mode: destroying the Canvas takes pfdRoot with it. Parented mode: no Canvas
-        // was created, so pfdRoot itself is the thing to clean up (without touching the parent).
         if (canvas != null)
             Destroy(canvas.gameObject);
         else if (pfdRoot != null)
@@ -328,16 +247,12 @@ public class A320PFD : MonoBehaviour
         BuildSpeedTape();
         BuildAltitudeTape();
         BuildHeadingTape();
-        BuildVSI();
         BuildFlightDirectorAndILS();
         BuildLabels();
     }
 
     private void BuildCanvas()
     {
-        // If a parent container was assigned, the PFD builds as a child of it instead - no new
-        // Canvas is created (the parent is assumed to already live under one), and canvas stays
-        // null so OnDestroy() knows to clean up pfdRoot directly instead.
         if (parentContainer != null)
             return;
 
@@ -363,10 +278,6 @@ public class A320PFD : MonoBehaviour
         bg.color = new Color(0.03f, 0.03f, 0.04f, 1f);
         bg.raycastTarget = false;
 
-        // Guarantees nothing generated below can ever render outside pfdRoot's own rect,
-        // regardless of whether it ended up under a full-screen Canvas or a small parent panel -
-        // this is what makes "only generate inside the parent" actually enforced rather than
-        // just a matter of where things happen to be positioned.
         pfdRoot.gameObject.AddComponent<RectMask2D>();
     }
 
@@ -378,10 +289,6 @@ public class A320PFD : MonoBehaviour
 
         attitudeContainer = CreateRect("Attitude_Container", pfdRoot, size, new Vector2(0f, AttitudeCenterYOffset));
 
-        // RectMask2D only clips to a RECTANGLE - a genuinely round instrument face needs an
-        // alpha-shaped Mask instead: an Image using a procedurally generated circle sprite,
-        // combined with a Mask component that clips children to wherever that sprite is opaque.
-        // showMaskGraphic = true so this same circle also doubles as the visible black bezel.
         Image frame = attitudeContainer.gameObject.AddComponent<Image>();
         frame.sprite = GetCircleSprite();
         frame.color = new Color(0f, 0f, 0f, 1f);
@@ -389,14 +296,10 @@ public class A320PFD : MonoBehaviour
         Mask mask = attitudeContainer.gameObject.AddComponent<Mask>();
         mask.showMaskGraphic = true;
 
-        // Oversized so rotation never reveals an edge.
         float overSize = size.x * 2.2f;
 
         horizonPivot = CreateRect("Horizon_Pivot", attitudeContainer, new Vector2(overSize, overSize), Vector2.zero);
 
-        // Sky's bottom edge and Ground's top edge both sit exactly at y=0 (the horizon) with no
-        // overlap - each panel is full oversized height, offset by exactly half its own height,
-        // so they meet edge-to-edge instead of one covering the other.
         RectTransform sky = CreateRect("Sky", horizonPivot, new Vector2(overSize, overSize), new Vector2(0f, overSize * 0.5f));
         Image skyImg = sky.gameObject.AddComponent<Image>();
         skyImg.color = skyColor;
@@ -413,21 +316,11 @@ public class A320PFD : MonoBehaviour
         lineImg.raycastTarget = false;
 
         BuildPitchLadder();
-
-        // Fixed aircraft reference symbol - child of the container (NOT the pivot), so it never
-        // rotates and always stays centered regardless of roll.
         BuildAircraftSymbol();
     }
 
     private void BuildPitchLadder()
     {
-        // attitudeRadius/25 previously put the 30 deg rung at 1.2x the container's half-height -
-        // outside the RectMask2D clip area, so it (and its label) never actually rendered.
-        // attitudeRadius/45 keeps the 30 deg rung comfortably inside the visible window. Stored
-        // as a field (not just a local) so Update() can move horizonPivot using this exact same
-        // scale - a given pitch angle shifts the horizon by exactly as many pixels as its own
-        // ladder rung sits at, so the ladder rung and the fixed aircraft symbol line up correctly
-        // once actual pitch reaches that angle.
         pitchPxPerDegree = attitudeRadius / 45f;
         float pxPerDegree = pitchPxPerDegree;
         float[] majorAngles = { 10f, 20f, 30f, -10f, -20f, -30f };
@@ -450,8 +343,6 @@ public class A320PFD : MonoBehaviour
             Text leftLabel = CreateText($"Pitch_{angle}_Label_L", horizonPivot, Mathf.Abs(angle).ToString("00"), pitchLadderFontSize, primaryColor, TextAnchor.MiddleCenter);
             SetRect(leftLabel.rectTransform, new Vector2(40f, 20f), new Vector2(-(lineWidth + attitudeRadius * 0.36f), y));
 
-            // Mirrored on the right side too, matching a real attitude indicator where both ends
-            // of every pitch rung carry a number, not just the left.
             Text rightLabel = CreateText($"Pitch_{angle}_Label_R", horizonPivot, Mathf.Abs(angle).ToString("00"), pitchLadderFontSize, primaryColor, TextAnchor.MiddleCenter);
             SetRect(rightLabel.rectTransform, new Vector2(40f, 20f), new Vector2(lineWidth + attitudeRadius * 0.36f, y));
         }
@@ -480,10 +371,6 @@ public class A320PFD : MonoBehaviour
     // -------------------- Roll Scale --------------------
     private void BuildRollScale()
     {
-        // 1.12x so the arc sits clearly above the sphere's top edge without crowding it, and
-        // (combined with the narrower +10 label offset below, instead of +20) without the far
-        // "60" labels reaching out sideways far enough to collide with the speed tape / GS
-        // scale / altitude group next to them.
         rollScaleRadius = attitudeRadius * 1.12f;
         float[] majorAngles = { -60f, -45f, -30f, -20f, -10f, 0f, 10f, 20f, 30f, 45f, 60f };
 
@@ -495,10 +382,6 @@ public class A320PFD : MonoBehaviour
             float rad = angle * Mathf.Deg2Rad;
             Vector2 outerPos = new Vector2(rollScaleRadius * Mathf.Sin(rad), rollScaleRadius * Mathf.Cos(rad) + AttitudeCenterYOffset);
 
-            // Parented to pfdRoot (NOT attitudeContainer) - the attitude indicator's RectMask2D
-            // is a SQUARE clip, so ticks/labels near the top of the round-looking arc were
-            // getting cut off right at the mask edge. Y is offset by AttitudeCenterYOffset to
-            // stay aligned with the attitude indicator's actual (shifted-down) center.
             RectTransform tick = CreateRect($"RollTick_{angle}", pfdRoot, new Vector2(3f, tickLength), outerPos);
             tick.localRotation = Quaternion.Euler(0f, 0f, -angle);
             Image ti = tick.gameObject.AddComponent<Image>();
@@ -513,9 +396,6 @@ public class A320PFD : MonoBehaviour
             }
         }
 
-        // 16x14 (wider than tall) so the triangle reads as a clear wedge rather than looking
-        // squashed - and positioned a bit further out (-4 instead of -8) so the apex actually
-        // touches down near the tick marks instead of floating above them.
         rollPointer = CreateRect("RollPointer", pfdRoot, new Vector2(16f, 14f), new Vector2(0f, rollScaleRadius - 4f + AttitudeCenterYOffset));
         Image pointerImg = rollPointer.gameObject.AddComponent<Image>();
         pointerImg.sprite = GetTriangleSprite();
@@ -528,8 +408,6 @@ public class A320PFD : MonoBehaviour
     {
         speedTapeHeight = pfdSize.y * 0.62f;
         Vector2 size = new Vector2(pfdSize.x * 0.11f, speedTapeHeight);
-        // 35 (was 8) - the roll scale's "60" labels reach out sideways past the sphere, so a
-        // small gap here left them crowded right up against the tape with no breathing room.
         Vector2 pos = new Vector2(-(attitudeRadius + size.x * 0.5f + 35f), 0f);
 
         speedTapeArea = CreateRect("Speed_Tape", pfdRoot, size, pos);
@@ -566,13 +444,6 @@ public class A320PFD : MonoBehaviour
         Vector2 size = new Vector2(pfdSize.x * 0.13f, altTapeHeight);
         Vector2 pos = new Vector2(attitudeRadius + GsAreaWidth + size.x * 0.5f, 0f);
 
-        // The reference box is wider than the tape (size.x + 14) but the same height range fits
-        // inside the tape's own height, so the exact union bounding box of tape + box is
-        // (tape width + 14, tape height). This group is a single empty parent sized to exactly
-        // that bound, with its own background - the tape and box are children of it (at local
-        // zero, since the group itself is centered at the same point they used to share as
-        // independent siblings), so the whole altitude meter is one grouped unit instead of two
-        // coincidentally-overlapping objects.
         Vector2 groupSize = new Vector2(size.x + 14f, altTapeHeight);
         RectTransform altGroup = CreateRect("Alt_Meter_Group", pfdRoot, groupSize, pos);
         Image groupBg = altGroup.gameObject.AddComponent<Image>();
@@ -642,45 +513,6 @@ public class A320PFD : MonoBehaviour
         SetRect(headingBoxText.rectTransform, new Vector2(52f, size.y), Vector2.zero);
     }
 
-    // -------------------- Vertical Speed Indicator --------------------
-    private void BuildVSI()
-    {
-        Vector2 size = new Vector2(pfdSize.x * 0.06f, pfdSize.y * 0.5f);
-        Vector2 pos = new Vector2(attitudeRadius + GsAreaWidth + pfdSize.x * 0.13f + size.x * 0.5f + 12f, 0f);
-        vsiScaleHalfHeight = size.y * 0.5f;
-
-        RectTransform vsiArea = CreateRect("VSI_Area", pfdRoot, size, pos);
-        Image bg = vsiArea.gameObject.AddComponent<Image>();
-        bg.color = new Color(0f, 0f, 0f, 0.5f);
-        bg.raycastTarget = false;
-
-        float[] scaleValues = { -3000f, -2000f, -1000f, 0f, 1000f, 2000f, 3000f };
-        foreach (float v in scaleValues)
-        {
-            float y = (v / VsiMaxRange) * vsiScaleHalfHeight;
-            RectTransform tick = CreateRect($"VSI_Tick_{v}", vsiArea, new Vector2(size.x * 0.4f, 2f), new Vector2(-size.x * 0.15f, y));
-            Image ti = tick.gameObject.AddComponent<Image>();
-            ti.color = primaryColor;
-            ti.raycastTarget = false;
-
-            Text label = CreateText($"VSI_Label_{v}", vsiArea, (Mathf.Abs(v) / 1000f).ToString("0"), vsiScaleFontSize, primaryColor, TextAnchor.MiddleRight);
-            SetRect(label.rectTransform, new Vector2(size.x * 0.55f, 16f), new Vector2(size.x * 0.28f, y));
-        }
-
-        vsiPointer = CreateRect("VSI_Pointer", vsiArea, new Vector2(size.x * 0.5f, 4f), new Vector2(0f, 0f));
-        Image pImg = vsiPointer.gameObject.AddComponent<Image>();
-        pImg.color = greenColor;
-        pImg.raycastTarget = false;
-
-        RectTransform box = CreateRect("VSI_Box", pfdRoot, new Vector2(size.x + 10f, 26f), new Vector2(pos.x, -(size.y * 0.5f + 20f)));
-        Image boxImg = box.gameObject.AddComponent<Image>();
-        boxImg.color = new Color(0f, 0f, 0f, 0.85f);
-        boxImg.raycastTarget = false;
-
-        vsiValueText = CreateText("VSI_ValueText", box, "+000", vsiValueFontSize, greenColor, TextAnchor.MiddleCenter, FontStyle.Bold);
-        SetRect(vsiValueText.rectTransform, new Vector2(size.x + 6f, 22f), Vector2.zero);
-    }
-
     // -------------------- Flight Director / LOC / GS --------------------
     private void BuildFlightDirectorAndILS()
     {
@@ -697,8 +529,6 @@ public class A320PFD : MonoBehaviour
         fdh.color = magentaColor;
         fdh.raycastTarget = false;
 
-        // Localizer scale (horizontal, below attitude indicator). Y offset by
-        // AttitudeCenterYOffset to stay aligned under the (shifted-down) attitude indicator.
         float locY = AttitudeCenterYOffset - (attitudeRadius + 40f);
         RectTransform locScale = CreateRect("LOC_Scale", pfdRoot, new Vector2(locHalfRange * 2f, 4f), new Vector2(0f, locY));
         Image locBg = locScale.gameObject.AddComponent<Image>();
@@ -719,9 +549,6 @@ public class A320PFD : MonoBehaviour
         locImg.color = magentaColor;
         locImg.raycastTarget = false;
 
-        // Glideslope scale (vertical, right of attitude indicator, left of altitude tape).
-        // Kept within GsAreaWidth of the attitude sphere so it never collides with the alt tape.
-        // Y offset by AttitudeCenterYOffset to stay vertically centered on the attitude indicator.
         Vector2 gsScalePos = new Vector2(attitudeRadius + GsAreaWidth * 0.5f, AttitudeCenterYOffset);
         RectTransform gsScale = CreateRect("GS_Scale", pfdRoot, new Vector2(4f, gsHalfHeight * 2f), gsScalePos);
         Image gsBg = gsScale.gameObject.AddComponent<Image>();
@@ -749,25 +576,15 @@ public class A320PFD : MonoBehaviour
         CreateHeaderLabel("SPD", new Vector2(-(attitudeRadius + pfdSize.x * 0.055f + 35f), speedTapeHeight * 0.5f + 20f), greenColor);
         CreateHeaderLabel("ALT", new Vector2(attitudeRadius + GsAreaWidth + pfdSize.x * 0.13f, altTapeHeight * 0.5f + 20f), greenColor);
         CreateHeaderLabel("HDG", new Vector2(0f, AttitudeCenterYOffset - (attitudeRadius + 45f)), greenColor);
-        CreateHeaderLabel("V/S", new Vector2(attitudeRadius + GsAreaWidth + pfdSize.x * 0.13f + pfdSize.x * 0.06f + 12f, pfdSize.y * 0.25f + 20f), greenColor);
-        CreateHeaderLabel("LOC", new Vector2(-(locHalfRange + 30f), AttitudeCenterYOffset - (attitudeRadius + 40f)), whiteOrMagentaForLoc());
-        // Narrow (32px, was 80px) and centered directly ABOVE the GS scale rather than beside
-        // it - the wide default label box was extending past the GS scale's own footprint and
-        // bleeding into the altitude group's left edge.
-        CreateHeaderLabel("GS", new Vector2(attitudeRadius + GsAreaWidth * 0.5f, gsHalfHeight + 16f + AttitudeCenterYOffset), whiteOrMagentaForLoc(), 32f);
+        CreateHeaderLabel("LOC", new Vector2(-(locHalfRange + 30f), AttitudeCenterYOffset - (attitudeRadius + 40f)), magentaColor);
+        CreateHeaderLabel("GS", new Vector2(attitudeRadius + GsAreaWidth * 0.5f, gsHalfHeight + 16f + AttitudeCenterYOffset), magentaColor, 32f);
 
-        // Top status row - FD / AP / CAT3 / DUAL / QNH.
         float topY = pfdSize.y * 0.5f - 20f;
         CreateHeaderLabel("FD", new Vector2(-pfdSize.x * 0.30f, topY), magentaColor);
         CreateHeaderLabel("AP", new Vector2(-pfdSize.x * 0.15f, topY), greenColor);
         CreateHeaderLabel("CAT3", new Vector2(0f, topY), greenColor);
         CreateHeaderLabel("DUAL", new Vector2(pfdSize.x * 0.15f, topY), primaryColor);
         CreateHeaderLabel("QNH", new Vector2(pfdSize.x * 0.30f, topY), primaryColor);
-    }
-
-    private Color whiteOrMagentaForLoc()
-    {
-        return magentaColor;
     }
 
     private void CreateHeaderLabel(string content, Vector2 pos, Color color)
@@ -784,7 +601,6 @@ public class A320PFD : MonoBehaviour
     // ==================================================
     // Update
     // ==================================================
-
     private void UpdateRoll()
     {
         float targetRoll = Mathf.Clamp(rollInput, -1f, 1f) * maxRoll;
@@ -799,10 +615,6 @@ public class A320PFD : MonoBehaviour
             rollScaleRadius * Mathf.Cos(clampedForPointer * Mathf.Deg2Rad) - 4f + AttitudeCenterYOffset);
     }
 
-    // Continuously turns the aircraft while banked, using the actual smoothed bank angle (so the
-    // turn ramps in/out exactly as the roll animation does) - holding +30 deg keeps heading
-    // climbing every frame in real time, exactly like a real coordinated turn, until the bank is
-    // released back toward level.
     private void UpdateHeadingFromRoll()
     {
         if (!autoTurnWithRoll)
@@ -813,22 +625,11 @@ public class A320PFD : MonoBehaviour
         heading = Wrap360(heading + turnRateDegPerSec * Time.deltaTime);
     }
 
-    // Normalized -1..+1 roll direction/magnitude, based on the actual smoothed bank (so it ramps
-    // in/out exactly as the visible roll animation does) rather than the raw Roll Input slider -
-    // shared by both the speed and altitude roll-reaction below so they move together.
     private float GetRollFactor()
     {
         return Mathf.Clamp(currentAircraftRoll / Mathf.Max(maxRoll, 0.0001f), -1f, 1f);
     }
 
-    // Moves the horizon vertically (a genuine pitch-up/pitch-down, distinct from horizonPivot's
-    // roll ROTATION) driven by the altitude tape's own actual current rate of change - NOT by
-    // reading Roll Input/currentAircraftRoll directly. Must run AFTER UpdateAltitudeTape() each
-    // frame so displayAltitude already reflects this frame's value. Measuring the real frame-to-
-    // frame delta of displayAltitude (rather than re-deriving it from roll) means pitch responds
-    // correctly no matter WHAT is currently moving altitude - the roll-reaction offset, Vertical
-    // Speed integration, or even a manual Altitude edit - exactly like a real aircraft's pitch
-    // reflects its actual climb/descent rate, not a specific control input.
     private void UpdatePitchFromAltitude()
     {
         float targetPitch = 0f;
@@ -850,33 +651,10 @@ public class A320PFD : MonoBehaviour
         horizonPivot.anchoredPosition = new Vector2(0f, -currentPitch * pitchPxPerDegree);
     }
 
-    // Speed is Speed (the baseline, never modified) plus a bounded offset that follows roll
-    // direction directly: +roll -> speed rises toward Speed + Speed Roll Deviation, -roll ->
-    // speed falls toward Speed - Speed Roll Deviation, wings level -> settles back to exactly
-    // Speed. The offset can never exceed +/- Speed Roll Deviation no matter how long the roll is
-    // held, since it's computed fresh from the current roll factor every frame rather than
-    // accumulated over time.
     private void UpdateSpeedFromRoll()
     {
         float offset = speedReactsToRoll ? GetRollFactor() * speedRollDeviation : 0f;
         actualSpeed = Mathf.Max(0f, speed + offset);
-    }
-
-    // Altitude has two independent, additive pieces, neither of which ever touches the public
-    // Altitude field itself:
-    // 1. altitudeBaseline - the running integral of Vertical Speed over time (real climb/descent,
-    //    unbounded by design - that's genuinely how altitude works). At Vertical Speed 0 (the
-    //    default) this simply never changes.
-    // 2. A bounded roll-reaction offset, same shape as speed's above: +roll -> altitude rises
-    //    toward baseline + Altitude Roll Deviation, -roll -> falls toward baseline - Altitude
-    //    Roll Deviation, wings level -> settles back to exactly the baseline. Capped at
-    //    +/- Altitude Roll Deviation regardless of how long the roll is held.
-    private void UpdateAltitudeFromVS()
-    {
-        if (autoAltitudeFromVS)
-            altitudeBaseline = Mathf.Max(0f, altitudeBaseline + (verticalSpeed / 60f) * Time.deltaTime);
-        else
-            altitudeBaseline = altitude; // manual mode - baseline tracks whatever you type into Altitude
     }
 
     private void UpdateSpeedTape()
@@ -914,8 +692,9 @@ public class A320PFD : MonoBehaviour
 
     private void UpdateAltitudeTape()
     {
+        // Directly target the 'altitude' variable, offset by roll reaction if enabled
         float rollOffset = altitudeReactsToRoll ? GetRollFactor() * altitudeRollDeviation : 0f;
-        float altitudeTarget = Mathf.Max(0f, altitudeBaseline + rollOffset);
+        float altitudeTarget = Mathf.Max(0f, altitude + rollOffset);
         displayAltitude = Mathf.SmoothDamp(displayAltitude, altitudeTarget, ref altVelocity, smoothDuration);
 
         float nearestBase = Mathf.Round(displayAltitude / AltStep) * AltStep;
@@ -969,9 +748,6 @@ public class A320PFD : MonoBehaviour
                 continue;
             }
 
-            // Natural digit count (no 3-digit zero-padding) plus a degree symbol - "30" not
-            // "030", "5" not "005", but "300" still shows all three digits since that's its
-            // actual value, not padding.
             int roundedLabelValue = Mathf.RoundToInt(labelValue) % 360;
             string valueStr = roundedLabelValue + "°";
             if (label.text != valueStr)
@@ -986,21 +762,6 @@ public class A320PFD : MonoBehaviour
             headingBoxText.text = boxStr;
     }
 
-    private void UpdateVSI()
-    {
-        displayVS = Mathf.SmoothDamp(displayVS, verticalSpeed, ref vsVelocity, smoothDuration);
-
-        float clamped = Mathf.Clamp(displayVS, -VsiMaxRange, VsiMaxRange);
-        float y = (clamped / VsiMaxRange) * vsiScaleHalfHeight;
-        vsiPointer.anchoredPosition = new Vector2(vsiPointer.anchoredPosition.x, y);
-
-        int rounded = Mathf.RoundToInt(displayVS);
-        string sign = rounded >= 0 ? "+" : "-";
-        string valueStr = sign + Mathf.Abs(rounded).ToString("000");
-        if (vsiValueText.text != valueStr)
-            vsiValueText.text = valueStr;
-    }
-
     private void UpdateILSAndFD()
     {
         float locClamped = Mathf.Clamp(localizer, -1f, 1f);
@@ -1009,8 +770,6 @@ public class A320PFD : MonoBehaviour
         float gsClamped = Mathf.Clamp(glideslope, -1f, 1f);
         gsPointer.anchoredPosition = new Vector2(gsPointer.anchoredPosition.x, gsClamped * gsHalfHeight + AttitudeCenterYOffset);
 
-        // Flight director bars driven from the same ILS deviation signals - fully wireable to
-        // real FD command values later by replacing these two lines.
         fdVerticalBar.anchoredPosition = new Vector2(locClamped * attitudeRadius * 0.5f, 0f);
         fdHorizontalBar.anchoredPosition = new Vector2(0f, gsClamped * attitudeRadius * 0.5f);
     }
@@ -1028,8 +787,7 @@ public class A320PFD : MonoBehaviour
 
     private static float ShortestAngleDiff(float from, float to)
     {
-        float diff = (to - from + 540f) % 360f - 180f;
-        return diff;
+        return (to - from + 540f) % 360f - 180f;
     }
 
     private RectTransform CreateRect(string name, Transform parent, Vector2 size, Vector2 anchoredPos)
@@ -1042,10 +800,6 @@ public class A320PFD : MonoBehaviour
         return rt;
     }
 
-    // In Edit Mode (i.e. during an Editor Bake), every generated object is registered with the
-    // Undo system as it's created, so the entire bake is a single Ctrl+Z-able action instead of
-    // leaving behind objects Undo doesn't know about. No-op during Play Mode (Undo doesn't apply
-    // there, and UnityEditor isn't compiled into device builds at all).
     private void RegisterCreatedObjectForUndo(GameObject go)
     {
 #if UNITY_EDITOR
@@ -1081,9 +835,6 @@ public class A320PFD : MonoBehaviour
         return t;
     }
 
-    // Procedurally generates a single filled circle sprite (once, cached/reused for any size via
-    // RectTransform scaling - Image stretches it to fill whatever rect it's on). A ~1.5px soft
-    // alpha edge keeps it from looking jagged/pixelated when scaled up to the instrument's size.
     private static Sprite cachedCircleSprite;
     private static Sprite GetCircleSprite()
     {
@@ -1113,11 +864,6 @@ public class A320PFD : MonoBehaviour
         return cachedCircleSprite;
     }
 
-    // Procedurally generates a downward-pointing triangle/wedge sprite for the roll pointer,
-    // matching a real bank-angle pointer instead of a plain square. Texture2D.SetPixel treats
-    // y=0 as the BOTTOM of the image, and a UI Image's sprite renders with V=0 at the bottom of
-    // its RectTransform - so putting the apex at y=0 here makes it point down (toward the roll
-    // scale ticks below the pointer) once rendered.
     private static Sprite cachedTriangleSprite;
     private static Sprite GetTriangleSprite()
     {
@@ -1131,7 +877,6 @@ public class A320PFD : MonoBehaviour
 
         for (int y = 0; y < size; y++)
         {
-            // t=0 at the bottom (apex, zero width), t=1 at the top (full width base).
             float t = (float)y / (size - 1);
             float halfWidth = (size * 0.5f) * t;
 

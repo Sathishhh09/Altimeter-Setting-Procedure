@@ -31,8 +31,8 @@ public class Altimeter : MonoBehaviour
 
     [Header("QNH Randomization Settings")]
     [SerializeField] private bool randomizeTargetQNHOnStart = true;
-    [SerializeField] private int minQNHRange = 1007;
-    [SerializeField] private int maxQNHRange = 1020;
+    [SerializeField] private int minQNHRange = 1001;
+    [SerializeField] private int maxQNHRange = 1025;
 
     [Header("Rotation Settings")]
     [Tooltip("The GameObject that will rotate when the slider changes (e.g., Altimeter Needle/Dial).")]
