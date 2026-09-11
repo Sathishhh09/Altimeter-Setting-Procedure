@@ -34,16 +34,41 @@ public class ClickEvent : MonoBehaviour
     [Tooltip("Easing curve controlling movement speed over time.")]
     public AnimationCurve moveCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
+    [Header("Glow Material Settings")]
+    [Tooltip("Target Renderer to change material on. Defaults to this object's Renderer if unassigned.")]
+    [SerializeField] private Renderer targetRenderer;
+
+    [Tooltip("Material to display while waiting to be clicked.")]
+    [SerializeField] private Material glowMaterial;
+
     [Header("Events")]
     [Tooltip("Event fired automatically when the movement finishes.")]
     public UnityEvent onMovementComplete;
 
     private bool isMoving = false;
     private Camera mainCamera;
+    private Material originalMaterial;
 
     private void Start()
     {
         mainCamera = Camera.main;
+
+        // Auto-get Renderer component if not assigned manually in Inspector
+        if (targetRenderer == null)
+        {
+            targetRenderer = GetComponent<Renderer>();
+        }
+
+        // Cache original material and apply glow material at start
+        if (targetRenderer != null)
+        {
+            originalMaterial = targetRenderer.material;
+
+            if (glowMaterial != null)
+            {
+                targetRenderer.material = glowMaterial;
+            }
+        }
     }
 
     private void Update()
@@ -64,8 +89,33 @@ public class ClickEvent : MonoBehaviour
         {
             if (hit.transform == transform)
             {
+                // Revert to original material upon click
+                RestoreOriginalMaterial();
+
                 StartCoroutine(MoveAlongCurve());
             }
+        }
+    }
+
+    /// <summary>
+    /// Reverts the target renderer back to its original starting material.
+    /// </summary>
+    public void RestoreOriginalMaterial()
+    {
+        if (targetRenderer != null && originalMaterial != null)
+        {
+            targetRenderer.material = originalMaterial;
+        }
+    }
+
+    /// <summary>
+    /// Re-applies the glowing material (useful for resets).
+    /// </summary>
+    public void ApplyGlowMaterial()
+    {
+        if (targetRenderer != null && glowMaterial != null)
+        {
+            targetRenderer.material = glowMaterial;
         }
     }
 
