@@ -1,6 +1,6 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.Events; // Required for UnityEvent
+using UnityEngine.Events;
 
 public class ClickEvent : MonoBehaviour
 {
@@ -16,6 +16,13 @@ public class ClickEvent : MonoBehaviour
         Local,
         World
     }
+
+    [Header("Page Navigation Requirement")]
+    [Tooltip("The page index on which this object can be clicked.")]
+    [SerializeField] private int targetPageIndex = 0;
+
+    [Tooltip("If true, automatically calls RequestNavigationUnlock() when movement completes.")]
+    [SerializeField] private bool unlockNavigationOnComplete = true;
 
     [Header("Movement Axis Settings")]
     [Tooltip("Choose which axis the object should move along.")]
@@ -46,6 +53,7 @@ public class ClickEvent : MonoBehaviour
     public UnityEvent onMovementComplete;
 
     private bool isMoving = false;
+    private bool isCurrentPageActive = false;
     private Camera mainCamera;
     private Material originalMaterial;
 
@@ -53,27 +61,57 @@ public class ClickEvent : MonoBehaviour
     {
         mainCamera = Camera.main;
 
-        // Auto-get Renderer component if not assigned manually in Inspector
         if (targetRenderer == null)
         {
             targetRenderer = GetComponent<Renderer>();
         }
 
-        // Cache original material and apply glow material at start
         if (targetRenderer != null)
         {
             originalMaterial = targetRenderer.material;
+        }
 
-            if (glowMaterial != null)
-            {
-                targetRenderer.material = glowMaterial;
-            }
+        // Check if starting page matches
+        EvaluatePageMatch(PageNavigationController.CurrentIndex);
+    }
+
+    private void OnEnable()
+    {
+        PageNavigationController.OnPageChanged += OnPageChanged;
+    }
+
+    private void OnDisable()
+    {
+        PageNavigationController.OnPageChanged -= OnPageChanged;
+    }
+
+    private void OnPageChanged(int pageIndex)
+    {
+        EvaluatePageMatch(pageIndex);
+    }
+
+    private void EvaluatePageMatch(int currentPageIndex)
+    {
+        isCurrentPageActive = (currentPageIndex == targetPageIndex);
+
+        // Apply visual glow feedback only on the target page
+        if (isCurrentPageActive && !isMoving)
+        {
+            ApplyGlowMaterial();
+        }
+        else
+        {
+            RestoreOriginalMaterial();
         }
     }
 
     private void Update()
     {
-        if (Input.GetMouseButtonDown(0) && !isMoving)
+        // Block clicks if it is not the active page or already animating
+        if (!isCurrentPageActive || isMoving)
+            return;
+
+        if (Input.GetMouseButtonDown(0))
         {
             CheckForObjectClick();
         }
@@ -89,17 +127,12 @@ public class ClickEvent : MonoBehaviour
         {
             if (hit.transform == transform)
             {
-                // Revert to original material upon click
                 RestoreOriginalMaterial();
-
                 StartCoroutine(MoveAlongCurve());
             }
         }
     }
 
-    /// <summary>
-    /// Reverts the target renderer back to its original starting material.
-    /// </summary>
     public void RestoreOriginalMaterial()
     {
         if (targetRenderer != null && originalMaterial != null)
@@ -108,9 +141,6 @@ public class ClickEvent : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Re-applies the glowing material (useful for resets).
-    /// </summary>
     public void ApplyGlowMaterial()
     {
         if (targetRenderer != null && glowMaterial != null)
@@ -144,7 +174,12 @@ public class ClickEvent : MonoBehaviour
         transform.position = targetPosition;
         isMoving = false;
 
-        // Trigger the UnityEvent
+        // Auto-unlock navigation page rule if requested
+        if (unlockNavigationOnComplete)
+        {
+            PageNavigationController.RequestNavigationUnlock();
+        }
+
         onMovementComplete?.Invoke();
     }
 
