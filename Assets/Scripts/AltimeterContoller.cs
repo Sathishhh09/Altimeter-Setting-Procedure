@@ -24,7 +24,7 @@ public class A320PFD : MonoBehaviour
     [Tooltip("Baseline/commanded airspeed. What the tape shows is this plus a bounded roll-reaction offset.")]
     public float speed = 140f;
     [Tooltip("Baseline/commanded altitude. What the tape shows is this plus a bounded roll-reaction offset.")]
-    public float altitude = 5000f;
+    public float altitude = 3500f;
     [Range(0f, 359.99f)] public float heading = 270f;
 
     [Tooltip("When on, Heading is no longer a free value you set directly - holding a bank angle continuously turns the aircraft.")]
@@ -38,6 +38,9 @@ public class A320PFD : MonoBehaviour
     [Min(0f)] public float speedRollDeviation = 15f;
 
     [Header("Altitude Dynamics")]
+    [Tooltip("Speed/Rate at which altitude increases or decreases (feet/second).")]
+    public float altimeterSpeed = 10f;
+
     [Tooltip("When on, displayed altitude includes a bounded offset based on Roll Input.")]
     public bool altitudeReactsToRoll = true;
 
@@ -182,6 +185,7 @@ public class A320PFD : MonoBehaviour
         if (pfdRoot == null)
             return;
 
+        UpdateAltitudeFromSpeed();
         UpdateRoll();
         UpdateHeadingFromRoll();
         UpdateSpeedFromRoll();
@@ -601,6 +605,11 @@ public class A320PFD : MonoBehaviour
     // ==================================================
     // Update
     // ==================================================
+    private void UpdateAltitudeFromSpeed()
+    {
+        altitude += altimeterSpeed * Time.deltaTime;
+    }
+
     private void UpdateRoll()
     {
         float targetRoll = Mathf.Clamp(rollInput, -1f, 1f) * maxRoll;
