@@ -1,0 +1,354 @@
+fileFormatVersion: 2
+guid: 772a1c7a4469b274c98834b3db0487a9
+ModelImporter:
+  serializedVersion: 22200
+  internalIDToNameTable: []
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Badge Gold
+    second: {fileID: 2100000, guid: 7836766032136a34ea403b3f016e12fa, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Badge Name
+    second: {fileID: 2100000, guid: 525c6e9c902c5a541a7374be781f340d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Beard
+    second: {fileID: 2100000, guid: f594598c9a256c843a6af4f8b286fd37, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Belt
+    second: {fileID: 2100000, guid: 9d5a51b410de0ad4c9bc22d6dc315d0a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Hair Alpha
+    second: {fileID: 2100000, guid: b0c4051287ddd974c8360eaa014aa145, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Headphones Brushed Steel
+    second: {fileID: 2100000, guid: a0379f398e97fc04a81a024d5d95eaaf, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Headphones Front Mat
+    second: {fileID: 2100000, guid: 967843b9238e528468cdbfa57b48e4dc, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Headphones Mic
+    second: {fileID: 2100000, guid: 5a4d5781f89350e4aa8b5441985665b7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Headphones Mic_3
+    second: {fileID: 2100000, guid: 823053cdded970743acd5f617fb05d79, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Headphones Side Mat
+    second: {fileID: 2100000, guid: 7a337195a57a9e0428d01e83221e774f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Headphones_Inside
+    second: {fileID: 2100000, guid: d6ac22a0fc9a7ce47823d4f22f7f6dce, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Headphoness Black Leather
+    second: {fileID: 2100000, guid: 6880d7e5eb8e56f4ebb5455775598b17, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Main Hair
+    second: {fileID: 2100000, guid: 24967a812f9ad454080b70dba541cf5d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Pants
+    second: {fileID: 2100000, guid: fba0e59d06bdf9547aef0bac09237844, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Shirt
+    second: {fileID: 2100000, guid: 7e0993619ec7ec44591e6f3d8a682479, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Shoes
+    second: {fileID: 2100000, guid: a5752c8dc42fdb949a339e8663c05d37, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Skin Changed
+    second: {fileID: 2100000, guid: 1d8acc41bc71af44196aec383f4ab4be, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Sunglass Gloss
+    second: {fileID: 2100000, guid: 859d58ebe59424f4793d5c60fe6225e9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Sunglass Gold
+    second: {fileID: 2100000, guid: 15ba9ee6b9e415448832947a96e3a145, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Sunglass Shade
+    second: {fileID: 2100000, guid: 3d202ef1c734c6049a42f316e36ada4c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Sunglass Silver
+    second: {fileID: 2100000, guid: cdec972acea2b7949844ca879d3c6d68, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Sunglass Transparent
+    second: {fileID: 2100000, guid: 071a6e18623495a488c9527221ec059a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Tie
+    second: {fileID: 2100000, guid: a70e1f0cfe0367e41904a2086f2117d7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Wing Logo
+    second: {fileID: 2100000, guid: a5ef4869e65d4f947b5a2a995a5e907c, type: 2}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Ch08_1003_Diffuse
+    second: {fileID: 2800000, guid: d88a9697584f6804387523660deb2e15, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Ch08_1003_Normal
+    second: {fileID: 2800000, guid: bc8d1697be372be4eaaa4d7388c01035, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Headphones Black LeatherColor
+    second: {fileID: 2800000, guid: 6bcf2ed1e59c3004ea9e976e88babb0e, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Headphones Brushed Steel Color
+    second: {fileID: 2800000, guid: 1ba314a0204f4854eabb3e9f4ced0d4c, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Headphones Front Mat Color
+    second: {fileID: 2800000, guid: 759a7c7c536ac5644afa7b1657dbff3e, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Headphones MIC3_baseColor
+    second: {fileID: 2800000, guid: 0db781cd8865fa540b4f156ff1fb6d7c, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Headphones Mic baseColor
+    second: {fileID: 2800000, guid: 794d7d85cdf24734d9b08f11711c9ade, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Headphones Side Mat Color
+    second: {fileID: 2800000, guid: 948b509c992981044839bed24898201a, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Headphones_Inside baseColor
+    second: {fileID: 2800000, guid: 4684879f0d3ac5041960530576436a88, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: LOWPOLYMIC_emissive
+    second: {fileID: 2800000, guid: a62a5235370b1c448ab3e1eb0e885910, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: MIC3_normal
+    second: {fileID: 2800000, guid: 98b5613f4443f834391c3d81e1be4b84, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Namebadge_DefaultMaterial_AlbedoTransparency
+    second: {fileID: 2800000, guid: f0ca82a8ddb76b64dbc8adb55b747865, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Namebadge_DefaultMaterial_MetallicSmoothness
+    second: {fileID: 2800000, guid: 460570d129dac1447b57d3b5cca94f1c, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Namebadge_DefaultMaterial_Normal
+    second: {fileID: 2800000, guid: df313baf7b7f11547b9355945bba4098, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Pant Color Normal
+    second: {fileID: 2800000, guid: 9161b61daecd50d46855d954dd225706, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Pilot Hair Opacity
+    second: {fileID: 2800000, guid: a6856d7f5b4caf1408657d9b6b7fddcb, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Pilot Shirt Base Color_2
+    second: {fileID: 2800000, guid: 6cdf0bd72cd6b444fa1d116221f6cebe, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Pilot Shirt Normal_2
+    second: {fileID: 2800000, guid: e52752936d36f534d9e6ab40a0271d37, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Pilot Skin Normal
+    second: {fileID: 2800000, guid: 676810ad7b4cc2441aee1937abb1288f, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Shoe1_Diffuse
+    second: {fileID: 2800000, guid: 66cc8ea765e8d9d4da77c167acbeafb4, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Shoe1_Normal
+    second: {fileID: 2800000, guid: 500060f39fc6bad4194c72edd7de9a71, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: 'Skin Color Altered_1 Base color '
+    second: {fileID: 2800000, guid: 5f724d92f0f5cc748bf359c06d6ff230, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Tie_0002 Shirt1.001_AlbedoTransparency
+    second: {fileID: 2800000, guid: c8843026b0a4c46438322d82534ab039, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Tie_0002 Shirt1.001_MetallicSmoothness
+    second: {fileID: 2800000, guid: c5e87d62b8bfc11469414a82b62a39bd, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Tie_0002 Shirt1.001_Normal
+    second: {fileID: 2800000, guid: d825d9f08cf87f445b2d2b27c6fa40dd, type: 3}
+  materials:
+    materialImportMode: 2
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
+    motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    importPhysicalCameras: 1
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 1
+    importLights: 1
+    nodeNameCollisionStrategy: 1
+    fileIdsGeneration: 2
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    keepQuads: 0
+    weldVertices: 1
+    bakeAxisConversion: 0
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 1
+    meshOptimizationFlags: -1
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 1
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    strictVertexDataChecks: 0
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+  referencedClips: []
+  importAnimation: 1
+  humanDescription:
+    serializedVersion: 3
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    globalScale: 1
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
+  animationType: 2
+  humanoidOversampling: 1
+  avatarSetup: 0
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 1
+  importBlendShapeDeformPercent: 1
+  remapMaterialsIfMaterialImportModeIsNone: 0
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
