@@ -5,10 +5,23 @@
 
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 [DisallowMultipleComponent]
 public class A320PFD : MonoBehaviour
 {
+    // ==================================================
+    // Custom Data Structure for Page Settings
+    // ==================================================
+    [System.Serializable]
+    public struct PageAltimeterConfig
+    {
+        [Tooltip("Target page index from PageNavigationController.")]
+        public int pageIndex;
+        [Tooltip("Altimeter speed value for this specific page.")]
+        public float altimeterSpeed;
+    }
+
     // ==================================================
     // Inspector - Roll Control
     // ==================================================
@@ -38,8 +51,11 @@ public class A320PFD : MonoBehaviour
     [Min(0f)] public float speedRollDeviation = 15f;
 
     [Header("Altitude Dynamics")]
-    [Tooltip("Speed/Rate at which altitude increases or decreases (feet/second).")]
+    [Tooltip("Default speed/rate at which altitude changes (feet/second) if not defined in the page list.")]
     public float altimeterSpeed = 10f;
+
+    [Tooltip("Per-page configuration list for altimeter speeds.")]
+    [SerializeField] private List<PageAltimeterConfig> pageAltimeterSpeeds = new List<PageAltimeterConfig>();
 
     [Tooltip("When on, displayed altitude includes a bounded offset based on Roll Input.")]
     public bool altitudeReactsToRoll = true;
@@ -178,6 +194,42 @@ public class A320PFD : MonoBehaviour
 
         BuildPFD();
         isBaked = true;
+    }
+
+    private void OnEnable()
+    {
+        PageNavigationController.OnPageChanged += HandlePageChanged;
+    }
+
+    private void Start()
+    {
+        // Sync the active page speed setting when starting up
+        SetAltimeterSpeedForPage(PageNavigationController.CurrentIndex);
+    }
+
+    private void OnDisable()
+    {
+        PageNavigationController.OnPageChanged -= HandlePageChanged;
+    }
+
+    private void HandlePageChanged(int pageIndex)
+    {
+        SetAltimeterSpeedForPage(pageIndex);
+    }
+
+    private void SetAltimeterSpeedForPage(int targetPageIndex)
+    {
+        if (pageAltimeterSpeeds == null)
+            return;
+
+        for (int i = 0; i < pageAltimeterSpeeds.Count; i++)
+        {
+            if (pageAltimeterSpeeds[i].pageIndex == targetPageIndex)
+            {
+                altimeterSpeed = pageAltimeterSpeeds[i].altimeterSpeed;
+                return;
+            }
+        }
     }
 
     private void Update()

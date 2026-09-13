@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using TMPro; // Added for TextMeshPro UI support
 
 public class TransitionLayerManager : MonoBehaviour
 {
@@ -21,6 +22,10 @@ public class TransitionLayerManager : MonoBehaviour
         [Tooltip("Ending transition limit (e.g. 4500, 5000, 5500...).")]
         [Range(3500f, 7000f)]
         public float endTransitionLayerLimit = 4500f;
+
+        [Header("UI Reference")]
+        [Tooltip("Text component used to display the start transition limit value.")]
+        public TMP_Text startTransitionText;
 
         [Header("Object Activation")]
         [Tooltip("The GameObject to enable when the altitude reaches or exceeds endTransitionLayerLimit.")]
@@ -44,6 +49,17 @@ public class TransitionLayerManager : MonoBehaviour
         {
             float snapped = Mathf.Round(value / step) * step;
             return Mathf.Clamp(snapped, min, max);
+        }
+
+        /// <summary>
+        /// Updates the assigned TMP_Text component with the current start transition limit value.
+        /// </summary>
+        public void UpdateUI()
+        {
+            if (startTransitionText != null)
+            {
+                startTransitionText.text = $"{startTransitionLayerLimit:F0} FT";
+            }
         }
     }
 
@@ -110,9 +126,10 @@ public class TransitionLayerManager : MonoBehaviour
             currentTransitionLevel = altimeterController.altitude;
         }
 
-        // Evaluate rules if current page has an assigned configuration
+        // Evaluate rules and update UI if current page has an assigned configuration
         if (activeConfig != null)
         {
+            activeConfig.UpdateUI();
             CheckCautionLimit(activeConfig);
             CheckEndTransitionLimit(activeConfig);
             EvaluatePageCompletion(activeConfig);
@@ -130,6 +147,11 @@ public class TransitionLayerManager : MonoBehaviour
     private void UpdateActiveConfig(int pageIndex)
     {
         activeConfig = pageConfigs.Find(config => config.pageIndex == pageIndex);
+
+        if (activeConfig != null)
+        {
+            activeConfig.UpdateUI();
+        }
     }
 
     /// <summary>
