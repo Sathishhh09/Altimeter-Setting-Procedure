@@ -18,6 +18,13 @@ public class A320PFD : MonoBehaviour
     {
         [Tooltip("Target page index from PageNavigationController.")]
         public int pageIndex;
+
+        [Tooltip("If true, entering this page changes the base altitude to the specified Page Altitude.")]
+        public bool usePageAltitude;
+
+        [Tooltip("Target baseline altitude applied when entering this page (if Use Page Altitude is true).")]
+        public float pageAltitude;
+
         [Tooltip("Altimeter speed value for this specific page.")]
         public float altimeterSpeed;
     }
@@ -54,7 +61,7 @@ public class A320PFD : MonoBehaviour
     [Tooltip("Default speed/rate at which altitude changes (feet/second) if not defined in the page list.")]
     public float altimeterSpeed = 10f;
 
-    [Tooltip("Per-page configuration list for altimeter speeds.")]
+    [Tooltip("Per-page configuration list for altimeter speeds and page altitudes.")]
     [SerializeField] private List<PageAltimeterConfig> pageAltimeterSpeeds = new List<PageAltimeterConfig>();
 
     [Tooltip("When on, displayed altitude includes a bounded offset based on Roll Input.")]
@@ -203,7 +210,7 @@ public class A320PFD : MonoBehaviour
 
     private void Start()
     {
-        // Sync the active page speed setting when starting up
+        // Sync the active page altitude & speed setting when starting up
         SetAltimeterSpeedForPage(PageNavigationController.CurrentIndex);
     }
 
@@ -226,6 +233,12 @@ public class A320PFD : MonoBehaviour
         {
             if (pageAltimeterSpeeds[i].pageIndex == targetPageIndex)
             {
+                // Update altitude if bool flag is true
+                if (pageAltimeterSpeeds[i].usePageAltitude)
+                {
+                    altitude = pageAltimeterSpeeds[i].pageAltitude;
+                }
+
                 altimeterSpeed = pageAltimeterSpeeds[i].altimeterSpeed;
                 return;
             }

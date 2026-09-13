@@ -69,6 +69,10 @@ public class TransitionLayerManager : MonoBehaviour
         }
     }
 
+    [Header("Global UI Reference")]
+    [Tooltip("Text component used to display the real-time current transition level / altitude.")]
+    [SerializeField] private TMP_Text currentTransitionLevelText;
+
     [Header("Page Navigation Sync")]
     [Tooltip("Configure transition layer rules and limits for each specific page index.")]
     [SerializeField] private List<PageTransitionConfig> pageConfigs = new();
@@ -133,6 +137,9 @@ public class TransitionLayerManager : MonoBehaviour
             currentTransitionLevel = altimeterController.altitude;
         }
 
+        // Display current altitude in FT on the UI text component
+        UpdateCurrentTransitionLevelUI();
+
         // Evaluate rules and update UI if current page has an assigned configuration
         if (activeConfig != null)
         {
@@ -141,6 +148,17 @@ public class TransitionLayerManager : MonoBehaviour
             CheckCautionLimit(activeConfig);
             CheckEndTransitionLimit(activeConfig);
             EvaluatePageCompletion(activeConfig);
+        }
+    }
+
+    /// <summary>
+    /// Updates the assigned global text component with the current transition level.
+    /// </summary>
+    private void UpdateCurrentTransitionLevelUI()
+    {
+        if (currentTransitionLevelText != null)
+        {
+            currentTransitionLevelText.text = $"{currentTransitionLevel:F0} FT";
         }
     }
 
@@ -171,7 +189,6 @@ public class TransitionLayerManager : MonoBehaviour
 
         if (currentTransitionLevel >= config.startTransitionLayerLimit)
         {
-            // Bypasses GameObject activation if the boolean flag is set to true
             if (!config.bypassObjectActivation)
             {
                 if (config.startTargetGameObjects != null && config.startTargetGameObjects.Length > 0)
@@ -218,7 +235,6 @@ public class TransitionLayerManager : MonoBehaviour
 
         if (currentTransitionLevel >= config.endTransitionLayerLimit)
         {
-            // Bypasses GameObject activation if the boolean flag is set to true
             if (!config.bypassObjectActivation)
             {
                 if (config.endTargetGameObjects != null && config.endTargetGameObjects.Length > 0)
@@ -274,5 +290,23 @@ public class TransitionLayerManager : MonoBehaviour
         if (range <= 0f) return 0f;
 
         return Mathf.Clamp01((currentTransitionLevel - activeConfig.startTransitionLayerLimit) / range);
+    }
+
+    /// <summary>
+    /// Enables bypassObjectActivation for the specified page index.
+    /// </summary>
+    /// <param name="pageIndex">The target page index (e.g., 2)</param>
+    public void EnableBypassForPage(int pageIndex)
+    {
+        PageTransitionConfig config = GetConfigForPage(pageIndex);
+        if (config != null)
+        {
+            config.bypassObjectActivation = true;
+            Debug.Log($"[TransitionLayerManager] Enabled bypassObjectActivation for Page {pageIndex}");
+        }
+        else
+        {
+            Debug.LogWarning($"[TransitionLayerManager] Could not find configuration for Page {pageIndex}");
+        }
     }
 }
