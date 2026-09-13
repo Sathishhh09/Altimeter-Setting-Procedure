@@ -1,188 +1,1375 @@
 using UnityEngine;
 using TMPro;
+using UnityEngine.UI;
 using UnityEngine.Events;
 using System.Collections;
 using System.Collections.Generic;
 
 public class QNHEnterController : MonoBehaviour
 {
-    [Header("References")]
-    [SerializeField] private QNHController qnhController;
-    [Tooltip("Optional: Text UI element displaying the user's current entered QNH value.")]
-    [SerializeField] private TMP_Text enteredQNHText;
-    [Tooltip("Optional: InputField if the player types the QNH directly instead of turning a dial.")]
-    [SerializeField] private TMP_InputField qnhInputField;
+    // ============================================================
+    // PAGE QNH FIELD
+    // ============================================================
 
-    [Header("Input Settings")]
-    [Tooltip("Tolerance for comparing floating-point QNH values.")]
-    [SerializeField] private float matchTolerance = 0.01f;
+    [System.Serializable]
+    public class PageQNHField
+    {
+        [Header("References")]
+        public TMP_InputField inputField;
+        public TMP_Text enteredQNHText;
+        public Image feedbackImage;
+
+
+        [Header("Page Objects")]
+        [Tooltip("Objects to turn ON when answered correctly, only visible on this page.")]
+        public GameObject[] objectsToEnable;
+
+
+        [Header("Settings")]
+        [Tooltip("If checked, dynamically fetches the generated QNH from target source page/QNHController.")]
+        public bool useDynamicQNHAnswer = true;
+
+        [Tooltip("Fallback answer if dynamic QNH is turned off or controller is not found.")]
+        public float correctAnswer;
+
+        [Tooltip("Page index where this QNH input field is active.")]
+        public int pageIndex;
+
+        [Tooltip("Page index from which to fetch target QNH. If set to -1, defaults to (pageIndex - 1).")]
+        public int sourcePageIndex = -1;
+
+
+        [Header("Auto-Fill Automation")]
+        [Tooltip("If TRUE: this field will NOT wait for user input. It auto-fills as soon as preceding conditions are met.")]
+        public bool isAutoFillField = false;
+
+        [Tooltip("Delay in seconds before auto-filling this field after previous inputs succeed.")]
+        public float autoFillDelay = 0.5f;
+
+
+        [HideInInspector]
+        public bool solved;
+
+        [HideInInspector]
+        public float currentEnteredValue;
+    }
+
+
+    // ============================================================
+    // DYNAMIC QNH SOURCE
+    // ============================================================
+
+    [Header("Dynamic QNH Source")]
+    [Tooltip("Reference to the QNHController instance generating target QNH values.")]
+    public QNHController qnhController;
+
+
+    // ============================================================
+    // PAGE FIELDS
+    // ============================================================
+
+    [Header("Page Fields (Sequential Order)")]
+    public PageQNHField[] pageFields;
+
+
+    // ============================================================
+    // FEEDBACK
+    // ============================================================
+
+    [Header("Common Wrong Feedback")]
+    public TMP_Text feedbackText;
+
+
+    // ============================================================
+    // AUDIO
+    // ============================================================
+
+    [Header("Audio")]
+    public AudioSource audioSource;
+    public AudioClip correctSound;
+    public AudioClip wrongSound;
+
+
+    // ============================================================
+    // FEEDBACK SPRITES
+    // ============================================================
+
+    [Header("Feedback Sprites")]
+    public Sprite correctSprite;
+    public Sprite wrongSprite;
+
+
+    // ============================================================
+    // BUTTONS
+    // ============================================================
+
+    [Header("Buttons")]
+    public Button validateButton;
+    public Button autoFillButton;
+
+
+    // ============================================================
+    // SETTINGS
+    // ============================================================
+
+    [Header("Settings")]
+    public int maxWrongAttempts = 3;
+    public float matchTolerance = 0.01f;
+
+
+    // ============================================================
+    // EVENTS
+    // ============================================================
 
     [Header("Events")]
-    [Tooltip("Triggered when the user successfully matches the target QNH from the target page.")]
     public UnityEvent onQNHMatched;
-    [Tooltip("Triggered when the user enters an incorrect QNH value upon submission.")]
     public UnityEvent onQNHMismatch;
-    [Tooltip("Triggered whenever the user changes their entered QNH value.")]
     public UnityEvent<float> onEnteredQNHChanged;
+    public UnityEvent onPageFieldsCompleted;
+    public UnityEvent onAllAnswersVerified;
 
-    private float currentEnteredQNH;
-    private int sourcePageIndex = -1; // Page index from which to grab the target QNH
+
+    // ============================================================
+    // INTERNAL STATE
+    // ============================================================
+
+    private int wrongAttempts;
+    private bool solved;
+    private bool isValidating;
+    private int previousPageIndex = -1;
+
+
+    // ============================================================
+    // SAVED PAGE STATE
+    // ============================================================
+
+    private readonly Dictionary<int, string> savedValues =
+        new Dictionary<int, string>();
+
+    private readonly Dictionary<int, bool> savedImageStates =
+        new Dictionary<int, bool>();
+
+
+    // ============================================================
+    // CURRENT ACTIVE FIELD RETRIEVAL
+    // ============================================================
+
+    private PageQNHField CurrentField
+    {
+        get
+        {
+            int currentPage =
+                PageNavigationController.CurrentIndex;
+
+            foreach (PageQNHField field in pageFields)
+            {
+                if (
+                    field.pageIndex == currentPage &&
+                    !field.solved
+                )
+                {
+                    return field;
+                }
+            }
+
+            return null;
+        }
+    }
+
+
+    // ============================================================
+    // ACTIVE UI REFERENCES
+    // ============================================================
+
+    private TMP_InputField ActiveInputField =>
+        CurrentField != null
+            ? CurrentField.inputField
+            : null;
+
+
+    private TMP_Text ActiveTextUI =>
+        CurrentField != null
+            ? CurrentField.enteredQNHText
+            : null;
+
+
+    private Image ActiveImage =>
+        CurrentField != null
+            ? CurrentField.feedbackImage
+            : null;
+
+
+    // ============================================================
+    // ACTIVE ANSWER
+    // ============================================================
+
+    private float ActiveAnswer
+    {
+        get
+        {
+            if (CurrentField == null)
+                return 0f;
+
+
+            // ----------------------------------------------------
+            // DYNAMIC QNH ANSWER
+            // ----------------------------------------------------
+
+            if (CurrentField.useDynamicQNHAnswer)
+            {
+                int targetSourcePage =
+                    CurrentField.sourcePageIndex >= 0
+                        ? CurrentField.sourcePageIndex
+                        : CurrentField.pageIndex - 1;
+
+
+                return GetTargetQNHFromSourcePage(
+                    targetSourcePage
+                );
+            }
+
+
+            // ----------------------------------------------------
+            // MANUAL ANSWER
+            // ----------------------------------------------------
+
+            return CurrentField.correctAnswer;
+        }
+    }
+
+
+    // ============================================================
+    // LIFECYCLE & EVENT SUBSCRIPTIONS
+    // ============================================================
 
     private void OnEnable()
     {
         PageNavigationController.OnPageChanged += OnPageChanged;
+
+        ActivateOnlyCurrentField();
     }
+
 
     private void OnDisable()
     {
         PageNavigationController.OnPageChanged -= OnPageChanged;
     }
 
+
     private void Start()
     {
+        // --------------------------------------------------------
+        // FIND QNH CONTROLLER
+        // --------------------------------------------------------
+
         if (qnhController == null)
         {
-            qnhController = FindFirstObjectByType<QNHController>();
+            qnhController =
+                FindFirstObjectByType<QNHController>();
         }
 
-        if (qnhInputField != null)
-        {
-            qnhInputField.onValueChanged.AddListener(OnInputFieldChanged);
-        }
 
-        ResetEnteredQNH();
-    }
-
-    /// <summary>
-    /// Handles updates when navigating pages.
-    /// Automatically checks against the previous page by default (e.g., Page 2 checks Page 1's QNH).
-    /// </summary>
-    private void OnPageChanged(int currentPageIndex)
-    {
-        // By default, target QNH is read from the immediate previous page (Page Index - 1)
-        sourcePageIndex = currentPageIndex - 1;
-        ResetEnteredQNH();
-    }
-
-    /// <summary>
-    /// Manually set which page's target QNH this entry controller should compare against.
-    /// </summary>
-    public void SetSourcePageIndex(int pageIndex)
-    {
-        sourcePageIndex = pageIndex;
-    }
-
-    /// <summary>
-    /// Resets the player's input value back to 0 and updates UI.
-    /// </summary>
-    public void ResetEnteredQNH()
-    {
-        currentEnteredQNH = 0f;
-        UpdateUI();
-    }
-
-    /// <summary>
-    /// Overload to reset the input value to a specific starting value if needed at runtime.
-    /// </summary>
-    public void ResetEnteredQNH(float resetValue)
-    {
-        currentEnteredQNH = resetValue;
-        UpdateUI();
-    }
-
-    /// <summary>
-    /// Call this when the user rotates a dial or presses a button to step QNH up or down.
-    /// Example: ModifyEnteredQNH(1f) or ModifyEnteredQNH(-1f)
-    /// </summary>
-    public void ModifyEnteredQNH(float delta)
-    {
-        currentEnteredQNH += delta;
-        UpdateUI();
-        onEnteredQNHChanged?.Invoke(currentEnteredQNH);
-    }
-
-    /// <summary>
-    /// Set a precise QNH value programmatically.
-    /// </summary>
-    public void SetEnteredQNH(float value)
-    {
-        currentEnteredQNH = value;
-        UpdateUI();
-        onEnteredQNHChanged?.Invoke(currentEnteredQNH);
-    }
-
-    private void OnInputFieldChanged(string textValue)
-    {
-        if (float.TryParse(textValue, out float result))
-        {
-            currentEnteredQNH = result;
-            onEnteredQNHChanged?.Invoke(currentEnteredQNH);
-        }
-    }
-
-    /// <summary>
-    /// Evaluates whether the current entered QNH matches the target QNH from the source (previous) page.
-    /// Call this from a "Confirm" button or directly when the dial stops moving.
-    /// </summary>
-    public void ValidateQNH()
-    {
         if (qnhController == null)
         {
-            Debug.LogError("[QNHEnterController] Reference to QNHController missing!", this);
-            return;
+            Debug.LogError(
+                "[QNHEnterController] " +
+                "QNHController was not found in the scene."
+            );
         }
 
-        float targetQNH = GetTargetQNHFromSourcePage();
 
-        if (Mathf.Abs(currentEnteredQNH - targetQNH) <= matchTolerance)
-        {
-            onQNHMatched?.Invoke();
-        }
-        else
-        {
-            onQNHMismatch?.Invoke();
-        }
-    }
+        // --------------------------------------------------------
+        // INPUT FIELD LISTENERS
+        // --------------------------------------------------------
 
-    /// <summary>
-    /// Helper to fetch target QNH generated for the designated source page.
-    /// </summary>
-    public float GetTargetQNHFromSourcePage()
-    {
-        // Search the controller's page config list for the specified target page index
-        var configList = GetTargetPageConfigurations();
-        if (configList != null)
+        foreach (PageQNHField field in pageFields)
         {
-            var targetConfig = configList.Find(c => c.pageIndex == sourcePageIndex);
-            if (targetConfig != null && targetConfig.generatedTargetQNH != 0)
+            if (field.inputField != null)
             {
-                return targetConfig.generatedTargetQNH;
+                PageQNHField capturedField = field;
+
+                field.inputField.onValueChanged.AddListener(
+                    (value) =>
+                        OnInputFieldChanged(
+                            capturedField,
+                            value
+                        )
+                );
             }
         }
 
-        // Fallback if target page isn't registered/generated
-        return qnhController.GetCurrentTargetQNH();
-    }
 
-    private List<QNHController.PageQNHConfig> GetTargetPageConfigurations()
-    {
-        // Access targetPageConfigurations via reflection or direct getter
-        var field = typeof(QNHController).GetField("targetPageConfigurations", 
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        
-        return field?.GetValue(qnhController) as List<QNHController.PageQNHConfig>;
-    }
+        // --------------------------------------------------------
+        // VALIDATE BUTTON
+        // --------------------------------------------------------
 
-    private void UpdateUI()
-    {
-        if (enteredQNHText != null)
+        if (validateButton != null)
         {
-            enteredQNHText.text = currentEnteredQNH.ToString("F0");
+            validateButton.onClick.RemoveAllListeners();
+
+            validateButton.onClick.AddListener(
+                ValidateQNH
+            );
         }
 
-        if (qnhInputField != null && qnhInputField.text != currentEnteredQNH.ToString("F0"))
+
+        // --------------------------------------------------------
+        // AUTO-FILL BUTTON
+        // --------------------------------------------------------
+
+        if (autoFillButton != null)
         {
-            qnhInputField.text = currentEnteredQNH.ToString("F0");
+            autoFillButton.onClick.RemoveAllListeners();
+
+            autoFillButton.onClick.AddListener(
+                AutoFill
+            );
         }
+
+
+        // --------------------------------------------------------
+        // INITIAL RESET
+        // --------------------------------------------------------
+
+        HideFeedback();
+
+        ResetAll();
+    }
+
+
+    // ============================================================
+    // PAGE CHANGE LOGIC
+    // ============================================================
+
+    private void OnPageChanged(int pageIndex)
+    {
+        HideFeedback();
+
+
+        // --------------------------------------------------------
+        // BACKWARD NAVIGATION
+        // --------------------------------------------------------
+
+        if (previousPageIndex > pageIndex)
+        {
+            for (int i = 0; i < pageFields.Length; i++)
+            {
+                PageQNHField field = pageFields[i];
+
+                if (field.pageIndex == previousPageIndex)
+                {
+                    // ------------------------------------------------
+                    // SAVE INPUT VALUE
+                    // ------------------------------------------------
+
+                    if (field.inputField != null)
+                    {
+                        savedValues[i] =
+                            field.inputField.text;
+
+                        field.inputField.text = "";
+                    }
+
+
+                    // ------------------------------------------------
+                    // SAVE IMAGE STATE
+                    // ------------------------------------------------
+
+                    if (field.feedbackImage != null)
+                    {
+                        savedImageStates[i] =
+                            field.feedbackImage.gameObject.activeSelf;
+
+                        field.feedbackImage.gameObject.SetActive(false);
+                    }
+
+
+                    // ------------------------------------------------
+                    // RESET FIELD STATE
+                    // ------------------------------------------------
+
+                    field.solved = false;
+                    field.currentEnteredValue = 0f;
+
+                    EnableFieldObjects(
+                        field,
+                        false
+                    );
+                }
+            }
+        }
+
+
+        // --------------------------------------------------------
+        // RESTORE SAVED VALUES
+        // --------------------------------------------------------
+
+        for (int i = 0; i < pageFields.Length; i++)
+        {
+            PageQNHField field = pageFields[i];
+
+            if (field.pageIndex == pageIndex)
+            {
+                if (
+                    field.inputField != null &&
+                    savedValues.ContainsKey(i)
+                )
+                {
+                    field.inputField.text =
+                        savedValues[i];
+                }
+
+
+                if (
+                    field.feedbackImage != null &&
+                    savedImageStates.ContainsKey(i)
+                )
+                {
+                    field.feedbackImage.gameObject.SetActive(
+                        savedImageStates[i]
+                    );
+                }
+            }
+        }
+
+
+        previousPageIndex = pageIndex;
+
+
+        // --------------------------------------------------------
+        // ACTIVATE CURRENT FIELD
+        // --------------------------------------------------------
+
+        ActivateOnlyCurrentField();
+    }
+
+
+    // ============================================================
+    // DIAL / VALUE MANIPULATION
+    // ============================================================
+
+    public void ModifyEnteredQNH(float delta)
+    {
+        PageQNHField current = CurrentField;
+
+        if (
+            current == null ||
+            solved ||
+            isValidating
+        )
+        {
+            return;
+        }
+
+
+        current.currentEnteredValue += delta;
+
+        UpdateUI(current);
+
+        onEnteredQNHChanged?.Invoke(
+            current.currentEnteredValue
+        );
+    }
+
+
+    public void SetEnteredQNH(float value)
+    {
+        PageQNHField current = CurrentField;
+
+        if (
+            current == null ||
+            solved ||
+            isValidating
+        )
+        {
+            return;
+        }
+
+
+        current.currentEnteredValue = value;
+
+        UpdateUI(current);
+
+        onEnteredQNHChanged?.Invoke(
+            current.currentEnteredValue
+        );
+    }
+
+
+    // ============================================================
+    // INPUT FIELD CHANGE
+    // ============================================================
+
+    private void OnInputFieldChanged(
+        PageQNHField field,
+        string textValue
+    )
+    {
+        if (
+            float.TryParse(
+                textValue,
+                out float result
+            )
+        )
+        {
+            field.currentEnteredValue = result;
+
+
+            if (field == CurrentField)
+            {
+                onEnteredQNHChanged?.Invoke(
+                    result
+                );
+            }
+        }
+        else if (string.IsNullOrWhiteSpace(textValue))
+        {
+            field.currentEnteredValue = 0f;
+        }
+    }
+
+
+    // ============================================================
+    // VALIDATION
+    // ============================================================
+
+    public void ValidateQNH()
+    {
+        if (
+            solved ||
+            isValidating ||
+            CurrentField == null
+        )
+        {
+            return;
+        }
+
+
+        PageQNHField current =
+            CurrentField;
+
+
+        // --------------------------------------------------------
+        // GET ACTIVE ANSWER
+        // --------------------------------------------------------
+
+        float targetAnswer =
+            ActiveAnswer;
+
+
+        // --------------------------------------------------------
+        // DEBUG
+        // --------------------------------------------------------
+
+        // Debug.Log(
+        //     $"[QNHEnterController] " +
+        //     $"Page = {current.pageIndex}, " +
+        //     $"Source Page = " +
+        //     $"{(
+        //         current.sourcePageIndex >= 0
+        //             ? current.sourcePageIndex
+        //             : current.pageIndex - 1
+        //     )}, " +
+        //     $"Entered = {current.currentEnteredValue}, " +
+        //     $"Expected = {targetAnswer}"
+        // );
+
+
+        // --------------------------------------------------------
+        // CHECK ANSWER
+        // --------------------------------------------------------
+
+        if (
+            Mathf.Abs(
+                current.currentEnteredValue -
+                targetAnswer
+            ) > matchTolerance
+        )
+        {
+            wrongAttempts++;
+
+
+            // ----------------------------------------------------
+            // WRONG SOUND
+            // ----------------------------------------------------
+
+            if (
+                audioSource != null &&
+                wrongSound != null
+            )
+            {
+                audioSource.PlayOneShot(
+                    wrongSound
+                );
+            }
+
+
+            // ----------------------------------------------------
+            // WRONG FEEDBACK
+            // ----------------------------------------------------
+
+            ShowFeedback();
+
+            onQNHMismatch?.Invoke();
+
+
+            // ----------------------------------------------------
+            // SHOW AUTO-FILL BUTTON
+            // ----------------------------------------------------
+
+            if (
+                wrongAttempts >= maxWrongAttempts &&
+                autoFillButton != null
+            )
+            {
+                autoFillButton.gameObject.SetActive(true);
+            }
+
+
+            StartCoroutine(
+                ShowWrongIconRoutine()
+            );
+
+            return;
+        }
+
+
+        // --------------------------------------------------------
+        // CORRECT ANSWER
+        // --------------------------------------------------------
+
+        StartCoroutine(
+            ValidateAndAdvanceRoutine()
+        );
+    }
+
+
+    // ============================================================
+    // VALIDATE AND ADVANCE
+    // ============================================================
+
+    private IEnumerator ValidateAndAdvanceRoutine()
+    {
+        isValidating = true;
+
+
+        // --------------------------------------------------------
+        // HIDE OLD FEEDBACK
+        // --------------------------------------------------------
+
+        HideFeedback();
+
+
+        PageQNHField current =
+            CurrentField;
+
+
+        // --------------------------------------------------------
+        // CORRECT IMAGE
+        // --------------------------------------------------------
+
+        if (ActiveImage != null)
+        {
+            ActiveImage.sprite =
+                correctSprite;
+
+            ActiveImage.gameObject.SetActive(true);
+        }
+
+
+        // --------------------------------------------------------
+        // CORRECT SOUND
+        // --------------------------------------------------------
+
+        if (
+            audioSource != null &&
+            correctSound != null
+        )
+        {
+            audioSource.PlayOneShot(
+                correctSound
+            );
+        }
+
+
+        // --------------------------------------------------------
+        // MARK FIELD SOLVED
+        // --------------------------------------------------------
+
+        if (current != null)
+        {
+            current.solved = true;
+
+
+            if (current.inputField != null)
+            {
+                current.inputField.interactable =
+                    false;
+            }
+
+
+            EnableFieldObjects(
+                current,
+                true
+            );
+        }
+
+
+        // --------------------------------------------------------
+        // MATCH EVENT
+        // --------------------------------------------------------
+
+        onQNHMatched?.Invoke();
+
+        wrongAttempts = 0;
+
+
+        // --------------------------------------------------------
+        // HIDE AUTO-FILL BUTTON
+        // --------------------------------------------------------
+
+        if (autoFillButton != null)
+        {
+            autoFillButton.gameObject.SetActive(false);
+        }
+
+
+        yield return null;
+
+
+        isValidating = false;
+
+
+        // --------------------------------------------------------
+        // NEXT FIELD
+        // --------------------------------------------------------
+
+        CheckNextFieldOrAutoFill();
+    }
+
+
+    // ============================================================
+    // CHECK NEXT FIELD
+    // ============================================================
+
+    private void CheckNextFieldOrAutoFill()
+    {
+        PageQNHField nextField =
+            CurrentField;
+
+
+        // --------------------------------------------------------
+        // NO MORE FIELDS
+        // --------------------------------------------------------
+
+        if (nextField == null)
+        {
+            onPageFieldsCompleted?.Invoke();
+
+            PageNavigationController
+                .RequestNavigationUnlock();
+
+            CheckTotalPuzzleCompletion();
+
+            return;
+        }
+
+
+        // --------------------------------------------------------
+        // ACTIVATE NEXT FIELD
+        // --------------------------------------------------------
+
+        ActivateOnlyCurrentField();
+
+
+        // NOTE:
+        // ActivateOnlyCurrentField() already starts the
+        // auto-fill coroutine when the next field is configured
+        // as an auto-fill field.
+    }
+
+
+    // ============================================================
+    // AUTO-FILL SPECIFIC FIELD
+    // ============================================================
+
+    private IEnumerator AutoFillSpecificFieldRoutine(
+        PageQNHField targetField
+    )
+    {
+        isValidating = true;
+
+
+        // --------------------------------------------------------
+        // DELAY
+        // --------------------------------------------------------
+
+        if (targetField.autoFillDelay > 0f)
+        {
+            yield return new WaitForSeconds(
+                targetField.autoFillDelay
+            );
+        }
+
+
+        // --------------------------------------------------------
+        // GET ANSWER
+        // --------------------------------------------------------
+
+        float targetValue =
+            targetField.useDynamicQNHAnswer
+                ? GetTargetQNHFromSourcePage(
+                    targetField.sourcePageIndex >= 0
+                        ? targetField.sourcePageIndex
+                        : targetField.pageIndex - 1
+                )
+                : targetField.correctAnswer;
+
+
+        // --------------------------------------------------------
+        // DIRECTLY SET VALUE
+        //
+        // We do NOT use SetEnteredQNH() here because
+        // SetEnteredQNH() intentionally blocks changes while
+        // isValidating is true.
+        // --------------------------------------------------------
+
+        targetField.currentEnteredValue =
+            targetValue;
+
+        UpdateUI(targetField);
+
+        onEnteredQNHChanged?.Invoke(
+            targetValue
+        );
+
+
+        // --------------------------------------------------------
+        // VALIDATION COMPLETE
+        // --------------------------------------------------------
+
+        isValidating = false;
+
+
+        StartCoroutine(
+            ValidateAndAdvanceRoutine()
+        );
+    }
+
+
+    // ============================================================
+    // WRONG ICON ROUTINE
+    // ============================================================
+
+    private IEnumerator ShowWrongIconRoutine()
+    {
+        isValidating = true;
+
+
+        // --------------------------------------------------------
+        // SHOW WRONG IMAGE
+        // --------------------------------------------------------
+
+        if (ActiveImage != null)
+        {
+            ActiveImage.sprite =
+                wrongSprite;
+
+            ActiveImage.gameObject.SetActive(true);
+        }
+
+
+        ShowFeedback();
+
+
+        yield return new WaitForSeconds(
+            0.7f
+        );
+
+
+        // --------------------------------------------------------
+        // HIDE WRONG IMAGE
+        // --------------------------------------------------------
+
+        if (ActiveImage != null)
+        {
+            ActiveImage.gameObject.SetActive(false);
+        }
+
+
+        // --------------------------------------------------------
+        // RESET CURRENT VALUE
+        // --------------------------------------------------------
+
+        PageQNHField current =
+            CurrentField;
+
+
+        if (current != null)
+        {
+            current.currentEnteredValue =
+                0f;
+
+            UpdateUI(current);
+
+
+            if (current.inputField != null)
+            {
+                current.inputField.Select();
+
+                current.inputField.ActivateInputField();
+            }
+        }
+
+
+        isValidating = false;
+    }
+
+
+    // ============================================================
+    // MANUAL AUTO-FILL
+    // ============================================================
+
+    public void AutoFill()
+    {
+        if (
+            solved ||
+            isValidating ||
+            CurrentField == null
+        )
+        {
+            return;
+        }
+
+
+        HideFeedback();
+
+
+        // --------------------------------------------------------
+        // GET ANSWER
+        // --------------------------------------------------------
+
+        float targetValue =
+            ActiveAnswer;
+
+
+        // --------------------------------------------------------
+        // DIRECTLY SET CURRENT FIELD
+        // --------------------------------------------------------
+
+        PageQNHField current =
+            CurrentField;
+
+        current.currentEnteredValue =
+            targetValue;
+
+        UpdateUI(current);
+
+        onEnteredQNHChanged?.Invoke(
+            targetValue
+        );
+
+
+        // --------------------------------------------------------
+        // VALIDATE
+        // --------------------------------------------------------
+
+        ValidateQNH();
+    }
+
+
+    // ============================================================
+    // TARGET QNH RESOLUTION
+    // ============================================================
+
+public float GetTargetQNHFromSourcePage(int sourcePageIndex)
+{
+    if (qnhController == null)
+    {
+        qnhController =
+            FindFirstObjectByType<QNHController>();
+    }
+
+    if (qnhController == null)
+    {
+        Debug.LogError(
+            "[QNHEnterController] QNHController not found!"
+        );
+
+        return 0f;
+    }
+
+    float target =
+        qnhController.GetTargetQNHForPage(
+            sourcePageIndex
+        );
+
+    Debug.Log(
+        $"[QNHEnterController] " +
+        $"Current Index = {PageNavigationController.CurrentIndex}, " +
+        $"Source Index = {sourcePageIndex}, " +
+        $"Target QNH = {target}"
+    );
+
+    return target;
+}
+
+
+    // ============================================================
+    // FIELD ACTIVATION
+    // ============================================================
+
+    private void ActivateOnlyCurrentField()
+    {
+        int currentPage =
+            PageNavigationController.CurrentIndex;
+
+
+        // --------------------------------------------------------
+        // DISABLE ALL INPUT FIELDS
+        // --------------------------------------------------------
+
+        foreach (PageQNHField field in pageFields)
+        {
+            if (field.inputField != null)
+            {
+                field.inputField.interactable =
+                    false;
+            }
+        }
+
+
+        // --------------------------------------------------------
+        // GET CURRENT ACTIVE FIELD
+        // --------------------------------------------------------
+
+        PageQNHField active =
+            CurrentField;
+
+
+        // --------------------------------------------------------
+        // NORMAL INPUT FIELD
+        // --------------------------------------------------------
+
+        if (
+            active != null &&
+            !active.solved &&
+            !active.isAutoFillField
+        )
+        {
+            if (active.inputField != null)
+            {
+                active.inputField.interactable =
+                    true;
+
+                active.inputField.Select();
+
+                active.inputField.ActivateInputField();
+            }
+        }
+
+
+        // --------------------------------------------------------
+        // PAGE OBJECT VISIBILITY
+        // --------------------------------------------------------
+
+        UpdatePageObjectsVisibility(
+            currentPage
+        );
+
+
+        // --------------------------------------------------------
+        // AUTO-FILL FIELD
+        // --------------------------------------------------------
+
+        if (
+            active != null &&
+            active.isAutoFillField
+        )
+        {
+            StartCoroutine(
+                AutoFillSpecificFieldRoutine(
+                    active
+                )
+            );
+        }
+    }
+
+
+    // ============================================================
+    // UPDATE UI
+    // ============================================================
+
+    private void UpdateUI(
+        PageQNHField field
+    )
+    {
+        if (field == null)
+            return;
+
+
+        string formattedVal =
+            field.currentEnteredValue == 0f
+                ? ""
+                : field.currentEnteredValue.ToString("F0");
+
+
+        // --------------------------------------------------------
+        // TEXT UI
+        // --------------------------------------------------------
+
+        if (field.enteredQNHText != null)
+        {
+            field.enteredQNHText.text =
+                formattedVal;
+        }
+
+
+        // --------------------------------------------------------
+        // INPUT FIELD
+        // --------------------------------------------------------
+
+        if (
+            field.inputField != null &&
+            field.inputField.text != formattedVal
+        )
+        {
+            field.inputField.text =
+                formattedVal;
+        }
+    }
+
+
+    // ============================================================
+    // ENABLE FIELD OBJECTS
+    // ============================================================
+
+    private void EnableFieldObjects(
+        PageQNHField field,
+        bool enable
+    )
+    {
+        if (
+            field?.objectsToEnable == null
+        )
+        {
+            return;
+        }
+
+
+        foreach (GameObject obj in field.objectsToEnable)
+        {
+            if (obj != null)
+            {
+                obj.SetActive(enable);
+            }
+        }
+    }
+
+
+    // ============================================================
+    // PAGE OBJECT VISIBILITY
+    // ============================================================
+
+    private void UpdatePageObjectsVisibility(
+        int currentPageIndex
+    )
+    {
+        foreach (PageQNHField field in pageFields)
+        {
+            if (field.objectsToEnable == null)
+                continue;
+
+
+            bool shouldBeActive =
+                field.solved &&
+                field.pageIndex == currentPageIndex;
+
+
+            foreach (GameObject obj in field.objectsToEnable)
+            {
+                if (obj != null)
+                {
+                    obj.SetActive(
+                        shouldBeActive
+                    );
+                }
+            }
+        }
+    }
+
+
+    // ============================================================
+    // SHOW FEEDBACK
+    // ============================================================
+
+    private void ShowFeedback()
+    {
+        if (feedbackText != null)
+        {
+            feedbackText.gameObject.SetActive(
+                true
+            );
+        }
+    }
+
+
+    // ============================================================
+    // HIDE FEEDBACK
+    // ============================================================
+
+    private void HideFeedback()
+    {
+        if (feedbackText != null)
+        {
+            feedbackText.gameObject.SetActive(
+                false
+            );
+        }
+    }
+
+
+    // ============================================================
+    // TOTAL PUZZLE COMPLETION
+    // ============================================================
+
+    private void CheckTotalPuzzleCompletion()
+    {
+        foreach (PageQNHField field in pageFields)
+        {
+            if (!field.solved)
+            {
+                return;
+            }
+        }
+
+
+        solved = true;
+
+
+        // --------------------------------------------------------
+        // DISABLE VALIDATE BUTTON
+        // --------------------------------------------------------
+
+        if (validateButton != null)
+        {
+            validateButton.interactable =
+                false;
+        }
+
+
+        // --------------------------------------------------------
+        // HIDE AUTO-FILL BUTTON
+        // --------------------------------------------------------
+
+        if (autoFillButton != null)
+        {
+            autoFillButton.gameObject.SetActive(
+                false
+            );
+        }
+
+
+        HideFeedback();
+
+
+        // --------------------------------------------------------
+        // ALL ANSWERS VERIFIED
+        // --------------------------------------------------------
+
+        onAllAnswersVerified?.Invoke();
+    }
+
+
+    // ============================================================
+    // RESET ALL
+    // ============================================================
+
+    public void ResetAll()
+    {
+        solved = false;
+        isValidating = false;
+        wrongAttempts = 0;
+
+
+        // --------------------------------------------------------
+        // CLEAR SAVED PAGE STATE
+        // --------------------------------------------------------
+
+        savedValues.Clear();
+        savedImageStates.Clear();
+
+
+        // --------------------------------------------------------
+        // VALIDATE BUTTON
+        // --------------------------------------------------------
+
+        if (validateButton != null)
+        {
+            validateButton.interactable =
+                true;
+        }
+
+
+        // --------------------------------------------------------
+        // AUTO-FILL BUTTON
+        // --------------------------------------------------------
+
+        if (autoFillButton != null)
+        {
+            autoFillButton.gameObject.SetActive(
+                false
+            );
+        }
+
+
+        HideFeedback();
+
+
+        // --------------------------------------------------------
+        // RESET ALL FIELDS
+        // --------------------------------------------------------
+
+        foreach (PageQNHField field in pageFields)
+        {
+            field.solved = false;
+            field.currentEnteredValue = 0f;
+
+
+            if (field.inputField != null)
+            {
+                field.inputField.text = "";
+
+                field.inputField.interactable =
+                    false;
+            }
+
+
+            if (field.enteredQNHText != null)
+            {
+                field.enteredQNHText.text = "";
+            }
+
+
+            if (field.feedbackImage != null)
+            {
+                field.feedbackImage.gameObject.SetActive(
+                    false
+                );
+            }
+
+
+            EnableFieldObjects(
+                field,
+                false
+            );
+        }
+
+
+        // --------------------------------------------------------
+        // ACTIVATE CURRENT PAGE FIELD
+        // --------------------------------------------------------
+
+        ActivateOnlyCurrentField();
     }
 }
