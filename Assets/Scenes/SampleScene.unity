@@ -449,15 +449,15 @@ MonoBehaviour:
   maxRoll: 30
   smoothDuration: 1
   speed: 140
-  altitude: 3500
+  altitude: 2000
   heading: 270
   autoTurnWithRoll: 1
   speedReactsToRoll: 1
   speedRollDeviation: 15
   altimeterSpeed: 0
   pageAltimeterSpeeds:
-  - pageIndex: 1
-    altimeterSpeed: 10
+  - pageIndex: 4
+    altimeterSpeed: 100
   altitudeReactsToRoll: 1
   altitudeRollDeviation: 10
   pitchReactsToAltitude: 1
@@ -769,8 +769,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.000030517578, y: -47.838}
-  m_SizeDelta: {x: 836, y: 254.69}
+  m_AnchoredPosition: {x: 0, y: -45.72351}
+  m_SizeDelta: {x: 802.1679, y: 250.4609}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &106641029
 MonoBehaviour:
@@ -6364,9 +6364,9 @@ RectTransform:
   - {fileID: 1604058213}
   - {fileID: 1723167986}
   - {fileID: 1831452862}
-  - {fileID: 383979958}
   - {fileID: 1015569076}
   - {fileID: 744674194}
+  - {fileID: 383979958}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -8098,19 +8098,7 @@ MonoBehaviour:
     pageText: 
     showDialogBox: 0
     showAlternatePanels: 1
-    alternatePanels:
-    - panel: {fileID: 744674193}
-      stayInUpcomingPages: 0
-      enableOnce: 0
-      hasBeenEnabledOnce: 0
-    - panel: {fileID: 1831452861}
-      stayInUpcomingPages: 0
-      enableOnce: 0
-      hasBeenEnabledOnce: 0
-    - panel: {fileID: 1604058212}
-      stayInUpcomingPages: 0
-      enableOnce: 0
-      hasBeenEnabledOnce: 0
+    alternatePanels: []
   - pageName: Page 6
     pageText: 
     showDialogBox: 0
@@ -8411,7 +8399,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &744674194
 RectTransform:
   m_ObjectHideFlags: 0
@@ -11364,29 +11352,35 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::QNHManager
   pageConfigurations:
   - pageIndex: 2
+    answerMode: 0
     qnhDisplayText: {fileID: 1310995942}
     generatedTargetQNH: 0
     inputField: {fileID: 106641029}
     enteredQNHText: {fileID: 424397855}
     feedbackImage: {fileID: 1216541756}
     objectsToEnable: []
-    useDynamicQNHAnswer: 1
     correctAnswer: 0
     isAutoFillField: 0
     autoFillDelay: 0
+    onPageCorrectAnswer:
+      m_PersistentCalls:
+        m_Calls: []
     solved: 0
     currentEnteredValue: 0
   - pageIndex: 4
+    answerMode: 2
     qnhDisplayText: {fileID: 998957997}
     generatedTargetQNH: 0
     inputField: {fileID: 1026500656}
     enteredQNHText: {fileID: 1829234796}
     feedbackImage: {fileID: 960903308}
     objectsToEnable: []
-    useDynamicQNHAnswer: 0
     correctAnswer: 1013
     isAutoFillField: 0
     autoFillDelay: 0
+    onPageCorrectAnswer:
+      m_PersistentCalls:
+        m_Calls: []
     solved: 0
     currentEnteredValue: 0
   minQNHRange: 1001
@@ -11456,8 +11450,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.000030517578, y: -47.838}
-  m_SizeDelta: {x: 836, y: 254.69}
+  m_AnchoredPosition: {x: -0.29180908, y: -46.794098}
+  m_SizeDelta: {x: 805.0204, y: 252.6019}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1026500656
 MonoBehaviour:
@@ -16512,7 +16506,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1604058213
 RectTransform:
   m_ObjectHideFlags: 0
@@ -17176,7 +17170,12 @@ MonoBehaviour:
     cautionLimit: 4000
     endTransitionLayerLimit: 4500
     startTransitionText: {fileID: 0}
-    targetGameObject: {fileID: 383979957}
+    startTargetGameObjects:
+    - {fileID: 744674193}
+    - {fileID: 1831452861}
+    - {fileID: 1604058212}
+    endTargetGameObjects:
+    - {fileID: 383979957}
     autoUnlockNavigation: 0
   altimeterController: {fileID: 55737415}
   currentTransitionLevel: 0
@@ -18477,7 +18476,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1831452862
 RectTransform:
   m_ObjectHideFlags: 0

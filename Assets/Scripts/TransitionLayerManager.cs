@@ -28,8 +28,14 @@ public class TransitionLayerManager : MonoBehaviour
         public TMP_Text startTransitionText;
 
         [Header("Object Activation")]
-        [Tooltip("The GameObject to enable when the altitude reaches or exceeds endTransitionLayerLimit.")]
-        public GameObject targetGameObject;
+        [Tooltip("If checked (true), starting and ending GameObjects will NOT be enabled automatically.")]
+        public bool bypassObjectActivation = false;
+
+        [Tooltip("GameObjects to enable when altitude reaches or exceeds startTransitionLayerLimit.")]
+        public GameObject[] startTargetGameObjects;
+
+        [Tooltip("GameObjects to enable when altitude reaches or exceeds endTransitionLayerLimit.")]
+        public GameObject[] endTargetGameObjects;
 
         [Header("Unlock Rules")]
         [Tooltip("If true, automatically unlocks navigation on PageNavigationController once this page's caution threshold is met.")]
@@ -78,7 +84,8 @@ public class TransitionLayerManager : MonoBehaviour
     // Internal State
     private readonly HashSet<int> cautionTriggeredPages = new();
     private readonly HashSet<int> completedPages = new();
-    private readonly HashSet<int> activatedObjectPages = new();
+    private readonly HashSet<int> startActivatedPages = new();
+    private readonly HashSet<int> endActivatedPages = new();
     private PageTransitionConfig activeConfig;
 
     // Public Properties
@@ -130,6 +137,7 @@ public class TransitionLayerManager : MonoBehaviour
         if (activeConfig != null)
         {
             activeConfig.UpdateUI();
+            CheckStartTransitionLimit(activeConfig);
             CheckCautionLimit(activeConfig);
             CheckEndTransitionLimit(activeConfig);
             EvaluatePageCompletion(activeConfig);
@@ -155,6 +163,34 @@ public class TransitionLayerManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Checks if altitude reached the start limit and enables designated start GameObjects (unless bypassed).
+    /// </summary>
+    private void CheckStartTransitionLimit(PageTransitionConfig config)
+    {
+        if (startActivatedPages.Contains(config.pageIndex)) return;
+
+        if (currentTransitionLevel >= config.startTransitionLayerLimit)
+        {
+            // Bypasses GameObject activation if the boolean flag is set to true
+            if (!config.bypassObjectActivation)
+            {
+                if (config.startTargetGameObjects != null && config.startTargetGameObjects.Length > 0)
+                {
+                    foreach (GameObject obj in config.startTargetGameObjects)
+                    {
+                        if (obj != null)
+                        {
+                            obj.SetActive(true);
+                            Debug.Log($"[TransitionLayerManager] Activated start object: {obj.name} on Page {config.pageIndex}");
+                        }
+                    }
+                }
+            }
+            startActivatedPages.Add(config.pageIndex);
+        }
+    }
+
+    /// <summary>
     /// Checks if the altitude exceeds the caution limit for the active page configuration and prints a caution message.
     /// </summary>
     private void CheckCautionLimit(PageTransitionConfig config)
@@ -174,25 +210,30 @@ public class TransitionLayerManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Checks if the altitude has crossed the end transition limit and enables the target GameObject.
+    /// Checks if altitude reached end transition limit and enables designated end GameObjects (unless bypassed).
     /// </summary>
     private void CheckEndTransitionLimit(PageTransitionConfig config)
     {
-        if (activatedObjectPages.Contains(config.pageIndex)) return;
+        if (endActivatedPages.Contains(config.pageIndex)) return;
 
         if (currentTransitionLevel >= config.endTransitionLayerLimit)
         {
-            if (config.targetGameObject != null)
+            // Bypasses GameObject activation if the boolean flag is set to true
+            if (!config.bypassObjectActivation)
             {
-                config.targetGameObject.SetActive(true);
-                Debug.Log($"[TransitionLayerManager] Altitude ({currentTransitionLevel:F0} ft) crossed end transition limit ({config.endTransitionLayerLimit:F0} ft) on Page {config.pageIndex}. Activated target GameObject: {config.targetGameObject.name}");
+                if (config.endTargetGameObjects != null && config.endTargetGameObjects.Length > 0)
+                {
+                    foreach (GameObject obj in config.endTargetGameObjects)
+                    {
+                        if (obj != null)
+                        {
+                            obj.SetActive(true);
+                            Debug.Log($"[TransitionLayerManager] Activated end object: {obj.name} on Page {config.pageIndex}");
+                        }
+                    }
+                }
             }
-            else
-            {
-                Debug.LogWarning($"[TransitionLayerManager] End transition limit reached on Page {config.pageIndex}, but no Target GameObject is assigned in the Inspector!");
-            }
-
-            activatedObjectPages.Add(config.pageIndex);
+            endActivatedPages.Add(config.pageIndex);
         }
     }
 

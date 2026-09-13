@@ -11,6 +11,16 @@ public class QNHManager : MonoBehaviour
     // NESTED CONFIGURATION CLASSES
     // ============================================================
 
+    public enum QNHAnswerMode
+    {
+        [Tooltip("Generates a dynamic random QNH value based on min/max range.")]
+        DynamicRandom,
+        [Tooltip("Uses the pre-entered 'generatedTargetQNH' field directly as the correct answer.")]
+        PresetGenerated,
+        [Tooltip("Uses the 'correctAnswer' field as the correct answer.")]
+        StaticAnswer
+    }
+
     [System.Serializable]
     public class PageQNHConfig
     {
@@ -18,11 +28,15 @@ public class QNHManager : MonoBehaviour
         [Tooltip("Page index where this configuration applies.")]
         public int pageIndex;
 
+        [Header("Answer Selection Strategy")]
+        [Tooltip("Choose how the correct answer/target QNH for this page is determined.")]
+        public QNHAnswerMode answerMode = QNHAnswerMode.DynamicRandom;
+
         [Header("Target Generation & Display")]
-        [Tooltip("TMP Text element to display the generated target QNH for this page.")]
+        [Tooltip("TMP Text element to display the generated or selected target QNH for this page.")]
         public TMP_Text qnhDisplayText;
 
-        [Tooltip("Generated target QNH value. Will auto-generate if 0 and static answer is unused.")]
+        [Tooltip("Target QNH value. Auto-generates if set to DynamicRandom and currently 0. Used as-is if set to PresetGenerated.")]
         public float generatedTargetQNH;
 
         [Header("Validation & Input References")]
@@ -34,11 +48,8 @@ public class QNHManager : MonoBehaviour
         [Tooltip("Objects to enable when this field is answered correctly on this page.")]
         public GameObject[] objectsToEnable;
 
-        [Header("Answer Settings")]
-        [Tooltip("If TRUE: Dynamically uses this page's generated QNH as the correct answer.")]
-        public bool useDynamicQNHAnswer = true;
-
-        [Tooltip("Fallback/static answer if useDynamicQNHAnswer is disabled.")]
+        [Header("Static Answer Settings")]
+        [Tooltip("Static answer used when Answer Mode is set to StaticAnswer.")]
         public float correctAnswer;
 
         [Header("Auto-Fill Settings")]
@@ -47,6 +58,10 @@ public class QNHManager : MonoBehaviour
 
         [Tooltip("Delay in seconds before auto-filling.")]
         public float autoFillDelay = 0.5f;
+
+        [Header("Page Specific Events")]
+        [Tooltip("Fires specifically when this page's QNH answer is correctly solved or verified.")]
+        public UnityEvent onPageCorrectAnswer;
 
         [HideInInspector]
         public bool solved;
@@ -103,7 +118,7 @@ public class QNHManager : MonoBehaviour
     // EVENTS
     // ============================================================
 
-    [Header("Events")]
+    [Header("Global Events")]
     public UnityEvent onTargetReached;
     public UnityEvent onQNHMatched;
     public UnityEvent onQNHMismatch;
@@ -154,13 +169,18 @@ public class QNHManager : MonoBehaviour
         {
             if (CurrentConfig == null) return 0f;
 
-            if (CurrentConfig.useDynamicQNHAnswer)
+            switch (CurrentConfig.answerMode)
             {
-                // Directly fetches the target QNH generated for the active field's page
-                return GetTargetQNHForPage(CurrentConfig.pageIndex);
-            }
+                case QNHAnswerMode.DynamicRandom:
+                case QNHAnswerMode.PresetGenerated:
+                    return GetTargetQNHForPage(CurrentConfig.pageIndex);
 
-            return CurrentConfig.correctAnswer;
+                case QNHAnswerMode.StaticAnswer:
+                    return CurrentConfig.correctAnswer;
+
+                default:
+                    return CurrentConfig.correctAnswer;
+            }
         }
     }
 
@@ -298,18 +318,26 @@ public class QNHManager : MonoBehaviour
             return defaultTargetQNH;
         }
 
-        if (config.generatedTargetQNH == 0f)
+        // Generate dynamically ONLY if specified and value is not yet set
+        if (config.answerMode == QNHAnswerMode.DynamicRandom && config.generatedTargetQNH == 0f)
         {
             config.generatedTargetQNH = Random.Range(minQNHRange, maxQNHRange + 1);
-            Debug.Log($"[QNHManager] Generated QNH {config.generatedTargetQNH} for page index {pageIndex}");
+            Debug.Log($"[QNHManager] Dynamically Generated QNH {config.generatedTargetQNH} for page index {pageIndex}");
         }
+
+        // Calculate value to show on UI Text
+        float activeTargetValue = config.answerMode switch
+        {
+            QNHAnswerMode.StaticAnswer => config.correctAnswer,
+            _ => config.generatedTargetQNH
+        };
 
         if (config.qnhDisplayText != null)
         {
-            config.qnhDisplayText.text = config.generatedTargetQNH.ToString("F0");
+            config.qnhDisplayText.text = activeTargetValue.ToString("F0");
         }
 
-        return config.generatedTargetQNH;
+        return activeTargetValue;
     }
 
     public float GetCurrentTargetQNH() => currentTargetQNH;
@@ -440,6 +468,9 @@ public class QNHManager : MonoBehaviour
             }
 
             EnableFieldObjects(current, true);
+
+            // Triggers page-specific correct answer event
+            current.onPageCorrectAnswer?.Invoke();
         }
 
         onQNHMatched?.Invoke();
@@ -480,9 +511,11 @@ public class QNHManager : MonoBehaviour
             yield return new WaitForSeconds(targetField.autoFillDelay);
         }
 
-        float targetValue = targetField.useDynamicQNHAnswer
-            ? GetTargetQNHForPage(targetField.pageIndex)
-            : targetField.correctAnswer;
+        float targetValue = targetField.answerMode switch
+        {
+            QNHAnswerMode.StaticAnswer => targetField.correctAnswer,
+            _ => GetTargetQNHForPage(targetField.pageIndex)
+        };
 
         targetField.currentEnteredValue = targetValue;
         UpdateUI(targetField);
@@ -685,8 +718,11 @@ public class QNHManager : MonoBehaviour
             config.solved = false;
             config.currentEnteredValue = 0f;
 
-            // Clear generated values so new ones can be rolled cleanly
-            config.generatedTargetQNH = 0f;
+            // Reset dynamic generated target so it can roll fresh if configured as DynamicRandom
+            if (config.answerMode == QNHAnswerMode.DynamicRandom)
+            {
+                config.generatedTargetQNH = 0f;
+            }
 
             if (config.inputField != null)
             {
