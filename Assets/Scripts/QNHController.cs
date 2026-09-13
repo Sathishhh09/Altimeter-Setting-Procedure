@@ -18,10 +18,6 @@ public class QNHController : MonoBehaviour
         public float generatedTargetQNH;
     }
 
-    [Header("UI References")]
-    [SerializeField] private TMP_Text firstAltitudeText;
-    [SerializeField] private TMP_Text secondAltitudeText;
-
     [Header("Target Page Configuration")]
     [Tooltip("Configure target page indices, UI references, and view generated QNH values in the Inspector at runtime.")]
     [SerializeField] private List<PageQNHConfig> targetPageConfigurations = new List<PageQNHConfig>();
@@ -33,7 +29,7 @@ public class QNHController : MonoBehaviour
     [SerializeField] private float defaultTargetQNH = 1013f; // Fallback if current page is NOT configured or randomization is off
 
     [Header("Events")]
-    [Tooltip("Triggered automatically when the target QNH is processed or achieved.")]
+    [Tooltip("Triggered automatically whenever a target QNH is setup or regenerated across pages.")]
     public UnityEvent onTargetReached;
 
     private float currentTargetQNH;
@@ -90,28 +86,14 @@ public class QNHController : MonoBehaviour
             currentTargetQNH = defaultTargetQNH;
         }
 
-        // Update global altitude texts
-        UpdateAltitudeUI(currentTargetQNH);
-
         // Update the page-specific text field if configured
         if (config != null && config.qnhDisplayText != null)
         {
             config.qnhDisplayText.text = currentTargetQNH.ToString("F0");
         }
-    }
 
-    /// <summary>
-    /// Updates Text Display using a specified QNH value.
-    /// </summary>
-    public void UpdateAltitudeUI(float value)
-    {
-        string formattedValue = value.ToString("F0") + " ft";
-
-        if (firstAltitudeText != null)
-            firstAltitudeText.text = formattedValue;
-
-        if (secondAltitudeText != null)
-            secondAltitudeText.text = formattedValue;
+        // Automatically fire event for all pages upon processing
+        onTargetReached?.Invoke();
     }
 
     /// <summary>
@@ -141,6 +123,10 @@ public class QNHController : MonoBehaviour
             if (PageNavigationController.CurrentIndex == pageIndex)
             {
                 SetupPageTargetQNH(pageIndex);
+            }
+            else
+            {
+                onTargetReached?.Invoke();
             }
         }
     }
