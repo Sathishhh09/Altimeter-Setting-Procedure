@@ -19,12 +19,7 @@ public class SingleFieldDialerController : MonoBehaviour
         public GameObject[] objectsToEnable;
 
         [Header("Settings")]
-        [Tooltip("If checked, dynamically fetches the generated QNH from QNHController for this pageIndex instead of using static correctAnswer.")]
-        public bool useDynamicQNHAnswer = true;
-        
-        [Tooltip("Fallback answer if dynamic QNH is turned off or controller is not found.")]
         public float correctAnswer;
-        
         public int pageIndex;
 
         [Header("Auto-Fill Automation")]
@@ -37,10 +32,6 @@ public class SingleFieldDialerController : MonoBehaviour
         [HideInInspector]
         public bool solved;
     }
-
-    [Header("Dynamic QNH Source")]
-    [Tooltip("Reference to the QNHController instance generating target QNH values.")]
-    public QNHController qnhController;
 
     [Header("Page Fields (Sequential Order)")]
     public PageField[] pageFields;
@@ -99,29 +90,7 @@ public class SingleFieldDialerController : MonoBehaviour
     }
 
     private TMP_InputField ActiveField => CurrentField != null ? CurrentField.inputField : null;
-    
-    // Dynamically gets answer from QNHController if configured, otherwise falls back to static answer
-    private float ActiveAnswer
-    {
-        get
-        {
-            if (CurrentField == null) return 0f;
-
-            if (CurrentField.useDynamicQNHAnswer)
-            {
-                if (qnhController == null)
-                    qnhController = FindFirstObjectByType<QNHController>();
-
-                if (qnhController != null)
-                {
-                    return qnhController.GetCurrentTargetQNH();
-                }
-            }
-
-            return CurrentField.correctAnswer;
-        }
-    }
-
+    private float ActiveAnswer => CurrentField != null ? CurrentField.correctAnswer : 0f;
     private Image ActiveImage => CurrentField != null ? CurrentField.feedbackImage : null;
 
     // ============================================================
@@ -141,9 +110,6 @@ public class SingleFieldDialerController : MonoBehaviour
 
     private void Start()
     {
-        if (qnhController == null)
-            qnhController = FindFirstObjectByType<QNHController>();
-
         if (validateButton != null)
         {
             validateButton.onClick.RemoveAllListeners();
@@ -364,7 +330,7 @@ public class SingleFieldDialerController : MonoBehaviour
             yield return new WaitForSeconds(targetField.autoFillDelay);
 
         if (targetField.inputField != null)
-            targetField.inputField.text = ActiveAnswer.ToString();
+            targetField.inputField.text = targetField.correctAnswer.ToString();
 
         isValidating = false;
         StartCoroutine(ValidateAndAdvanceRoutine());

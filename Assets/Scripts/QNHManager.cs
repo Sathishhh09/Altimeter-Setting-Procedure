@@ -300,6 +300,12 @@ public class QNHManager : MonoBehaviour
 
     private void SetupPageTargetQNH(int pageIndex)
     {
+        // Guard check: Avoid setting targets or throwing errors if this page has no QNH configuration
+        if (!pageConfigurations.Exists(c => c.pageIndex == pageIndex))
+        {
+            return;
+        }
+
         currentTargetQNH = GetTargetQNHForPage(pageIndex);
         onTargetReached?.Invoke();
     }
@@ -314,7 +320,7 @@ public class QNHManager : MonoBehaviour
 
         if (config == null)
         {
-            Debug.LogError($"[QNHManager] No QNH configuration found for page index {pageIndex}");
+            Debug.LogWarning($"[QNHManager] No QNH configuration found for page index {pageIndex}. Returning default target value.");
             return defaultTargetQNH;
         }
 

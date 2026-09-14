@@ -1,208 +1,130 @@
 using UnityEngine;
-using UnityEngine.UI;
 using TMPro;
+using UnityEngine.UI;
+using System.Collections;
 
 public class RandomQNH : MonoBehaviour
 {
-    [Header("Page Settings")]
-    [Tooltip("The 0-based index of the page where this validation logic should run.")]
-    [SerializeField] private int targetPageIndex = 6;
+    [Header("Player Input")]
+    public TMP_InputField qnhInput;
 
-    [Header("UI Component References")]
-    [SerializeField] private TMP_InputField inputField;
-    
-    [Tooltip("Optional direct reference to the Text component. If unassigned, auto-fetches from inputField.textComponent.")]
-    [SerializeField] private TMP_Text enteredQNHText;
-    
-    [SerializeField] private Button submitButton;
-    
-    [Tooltip("The UI Image component in your Hierarchy where feedback will be displayed.")]
-    [SerializeField] private Image feedbackImage;
+    [Header("Submit Button")]
+    public Button submitButton;
 
-    [Header("Feedback Sprites")]
-    [Tooltip("Assign the correct checkmark sprite directly from the Inspector.")]
-    [SerializeField] private Sprite correctSprite;
+    [Header("Feedback Objects")]
+    public GameObject correctObject;
+    public GameObject wrongObject;
 
-    [Tooltip("Assign the wrong cross sprite directly from the Inspector.")]
-    [SerializeField] private Sprite wrongSprite;
+    [Header("QNH Range")]
+    public int minQNH = 1001;
+    public int maxQNH = 1025;
 
-    [Header("Validation Range Settings")]
-    [Tooltip("Minimum allowed value (inclusive).")]
-    [SerializeField] private float minRange = 1001f;
+    [Header("Feedback Duration")]
+    public float displayTime = 2f;
 
-    [Tooltip("Maximum allowed value (inclusive).")]
-    [SerializeField] private float maxRange = 1025f;
+    private Coroutine feedbackCoroutine;
 
-    [Header("Navigation Lock Integration")]
-    [Tooltip("If true, unlocks navigation on PageNavigationController when answered correctly.")]
-    [SerializeField] private bool unlockNavigationOnCorrect = true;
-
-    private void Awake()
+    private void Start()
     {
-        Debug.Log("[RandomQNH] Awake called. Initializing script and resetting state.");
-        ResetState();
-    }
-
-    private void OnEnable()
-    {
-        Debug.Log("[RandomQNH] OnEnable called. Subscribing to events.");
-        PageNavigationController.OnPageChanged += HandlePageChanged;
-
+        // Connect the Submit Button to CheckQNH
         if (submitButton != null)
         {
-            submitButton.onClick.AddListener(ValidateInput);
-            Debug.Log("[RandomQNH] Added click listener to submitButton.");
-        }
-        else
-        {
-            Debug.LogWarning("[RandomQNH] Submit Button reference is missing!");
+            submitButton.onClick.AddListener(CheckQNH);
         }
 
-        if (inputField != null)
-        {
-            inputField.onSubmit.AddListener(OnInputFieldSubmit);
-            Debug.Log("[RandomQNH] Added submit listener to inputField.");
-        }
-        else
-        {
-            Debug.LogWarning("[RandomQNH] InputField reference is missing!");
-        }
+        // Hide feedback objects at the start
+        if (correctObject != null)
+            correctObject.SetActive(false);
 
-        CheckCurrentPage(PageNavigationController.CurrentIndex);
+        if (wrongObject != null)
+            wrongObject.SetActive(false);
     }
 
-    private void OnDisable()
+    public void CheckQNH()
     {
-        Debug.Log("[RandomQNH] OnDisable called. Unsubscribing from events.");
-        PageNavigationController.OnPageChanged -= HandlePageChanged;
-
-        if (submitButton != null)
-            submitButton.onClick.RemoveListener(ValidateInput);
-
-        if (inputField != null)
-            inputField.onSubmit.RemoveListener(OnInputFieldSubmit);
-    }
-
-    private void HandlePageChanged(int newPageIndex)
-    {
-        Debug.Log($"[RandomQNH] HandlePageChanged fired. New Page Index: {newPageIndex}");
-        CheckCurrentPage(newPageIndex);
-    }
-
-    private void CheckCurrentPage(int currentPageIndex)
-    {
-        bool isTargetPage = (currentPageIndex == targetPageIndex);
-        Debug.Log($"[RandomQNH] CheckCurrentPage: Current Page = {currentPageIndex}, Target Page = {targetPageIndex}. IsTargetPage? {isTargetPage}");
-
-        if (!isTargetPage)
-        {
-            Debug.Log("[RandomQNH] Current page is NOT the target page. Executing ResetState().");
-            ResetState();
-        }
-        else
-        {
-            Debug.Log("[RandomQNH] Current page matches the target page. Validation is active.");
-        }
-    }
-
-    private void OnInputFieldSubmit(string text)
-    {
-        Debug.Log($"[RandomQNH] OnInputFieldSubmit fired with raw text parameter: '{text}'. Triggering ValidateInput().");
-        ValidateInput();
-    }
-
-    /// <summary>
-    /// Validates user input directly from the text field/TMP_Text element against the range 1001-1025.
-    /// </summary>
-    public void ValidateInput()
-    {
-        Debug.Log($"[RandomQNH] ValidateInput() called. Current Page Index: {PageNavigationController.CurrentIndex}");
-
-        if (PageNavigationController.CurrentIndex != targetPageIndex)
-        {
-            Debug.LogWarning($"[RandomQNH] ValidateInput aborted! Page mismatch. Current: {PageNavigationController.CurrentIndex}, Target: {targetPageIndex}");
+        if (qnhInput == null)
             return;
-        }
 
-        TMP_Text targetTextComponent = enteredQNHText != null ? enteredQNHText : (inputField != null ? inputField.textComponent : null);
-
-        if (targetTextComponent == null)
+        // Try to convert player input to an integer
+        if (int.TryParse(qnhInput.text, out int playerQNH))
         {
-            Debug.LogError("[RandomQNH] No active TMP_Text component found to read input from!");
-            return;
-        }
-
-        string rawInput = targetTextComponent.text.Trim();
-        Debug.Log($"[RandomQNH] Extracted raw string from targetTextComponent: '{rawInput}'");
-
-        if (float.TryParse(rawInput, out float userValue))
-        {
-            bool isCorrect = userValue >= minRange && userValue <= maxRange;
-            Debug.Log($"[RandomQNH] Parsed float value: {userValue}. Allowed Range: [{minRange} - {maxRange}]. Result: {(isCorrect ? "CORRECT" : "INCORRECT")}");
-            
-            SetFeedbackImage(isCorrect ? correctSprite : wrongSprite);
-
-            if (isCorrect)
+            // Check whether the value is between 1001 and 1025
+            if (playerQNH >= minQNH && playerQNH <= maxQNH)
             {
-                if (unlockNavigationOnCorrect)
-                {
-                    Debug.Log("[RandomQNH] Answer is correct. Requesting navigation unlock via PageNavigationController.");
-                    PageNavigationController.RequestNavigationUnlock();
-                }
-                else
-                {
-                    Debug.Log("[RandomQNH] Answer is correct, but unlockNavigationOnCorrect is set to FALSE.");
-                }
+                ShowCorrect();
+            }
+            else
+            {
+                ShowWrong();
             }
         }
         else
         {
-            Debug.LogWarning($"[RandomQNH] Failed to parse input '{rawInput}' into a float value. Displaying wrong feedback sprite.");
-            SetFeedbackImage(wrongSprite);
+            // Invalid or empty input
+            ShowWrong();
         }
     }
 
-    private void SetFeedbackImage(Sprite sprite)
+    private void ShowCorrect()
     {
-        if (feedbackImage == null)
-        {
-            Debug.LogWarning("[RandomQNH] SetFeedbackImage called, but feedbackImage UI Reference is null!");
-            return;
-        }
+        if (feedbackCoroutine != null)
+            StopCoroutine(feedbackCoroutine);
 
-        if (sprite != null)
-        {
-            feedbackImage.sprite = sprite;
-            feedbackImage.gameObject.SetActive(true);
-            Debug.Log($"[RandomQNH] Set feedbackImage sprite to '{sprite.name}' and activated GameObject.");
-        }
-        else
-        {
-            feedbackImage.gameObject.SetActive(false);
-            Debug.LogWarning("[RandomQNH] SetFeedbackImage received a null sprite. Deactivating feedbackImage GameObject.");
-        }
+        feedbackCoroutine = StartCoroutine(CorrectFeedback());
     }
 
-    public void ResetState()
+    private void ShowWrong()
     {
-        Debug.Log("[RandomQNH] ResetState() executing.");
+        if (feedbackCoroutine != null)
+            StopCoroutine(feedbackCoroutine);
 
-        if (inputField != null)
-        {
-            inputField.text = string.Empty;
-            Debug.Log("[RandomQNH] Cleared inputField.text.");
-        }
+        feedbackCoroutine = StartCoroutine(WrongFeedback());
+    }
 
-        if (enteredQNHText != null)
-        {
-            enteredQNHText.text = string.Empty;
-            Debug.Log("[RandomQNH] Cleared enteredQNHText.text.");
-        }
+    private IEnumerator CorrectFeedback()
+    {
+        // Hide wrong object
+        if (wrongObject != null)
+            wrongObject.SetActive(false);
 
-        if (feedbackImage != null)
+        // Show correct object
+        if (correctObject != null)
+            correctObject.SetActive(true);
+
+        yield return new WaitForSeconds(displayTime);
+
+        // Hide correct object
+        if (correctObject != null)
+            correctObject.SetActive(false);
+
+        feedbackCoroutine = null;
+    }
+
+    private IEnumerator WrongFeedback()
+    {
+        // Hide correct object
+        if (correctObject != null)
+            correctObject.SetActive(false);
+
+        // Show wrong object
+        if (wrongObject != null)
+            wrongObject.SetActive(true);
+
+        yield return new WaitForSeconds(displayTime);
+
+        // Hide wrong object
+        if (wrongObject != null)
+            wrongObject.SetActive(false);
+
+        feedbackCoroutine = null;
+    }
+
+    private void OnDestroy()
+    {
+        // Remove the listener when this object is destroyed
+        if (submitButton != null)
         {
-            feedbackImage.gameObject.SetActive(false);
-            Debug.Log("[RandomQNH] Deactivated feedbackImage GameObject.");
+            submitButton.onClick.RemoveListener(CheckQNH);
         }
     }
 }

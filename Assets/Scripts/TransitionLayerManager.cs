@@ -86,6 +86,7 @@ public class TransitionLayerManager : MonoBehaviour
     private readonly HashSet<int> startActivatedPages = new();
     private readonly HashSet<int> endActivatedPages = new();
     private PageTransitionConfig activeConfig;
+    private int currentLoadedPageIndex = -1;
 
     public float CurrentTransitionLevel => currentTransitionLevel;
     public PageTransitionConfig ActiveConfig => activeConfig;
@@ -150,16 +151,55 @@ public class TransitionLayerManager : MonoBehaviour
 
     private void HandlePageChanged(int newPageIndex)
     {
+        // Deactivate targets from the page being left before changing activeConfig
+        if (currentLoadedPageIndex != -1 && currentLoadedPageIndex != newPageIndex)
+        {
+            DeactivatePageObjects(currentLoadedPageIndex);
+        }
+
         UpdateActiveConfig(newPageIndex);
     }
 
     private void UpdateActiveConfig(int pageIndex)
     {
+        currentLoadedPageIndex = pageIndex;
         activeConfig = pageConfigs.Find(config => config.pageIndex == pageIndex);
 
         if (activeConfig != null)
         {
             activeConfig.UpdateUI();
+        }
+    }
+
+    private void DeactivatePageObjects(int pageIndex)
+    {
+        PageTransitionConfig config = GetConfigForPage(pageIndex);
+        if (config == null) return;
+
+        // Turn off start target objects
+        if (config.startTargetGameObjects != null)
+        {
+            foreach (GameObject obj in config.startTargetGameObjects)
+            {
+                if (obj != null && obj.activeSelf)
+                {
+                    obj.SetActive(false);
+                    Debug.Log($"[TransitionLayerManager] Deactivated start object: {obj.name} from passed Page {pageIndex}");
+                }
+            }
+        }
+
+        // Turn off end target objects
+        if (config.endTargetGameObjects != null)
+        {
+            foreach (GameObject obj in config.endTargetGameObjects)
+            {
+                if (obj != null && obj.activeSelf)
+                {
+                    obj.SetActive(false);
+                    Debug.Log($"[TransitionLayerManager] Deactivated end object: {obj.name} from passed Page {pageIndex}");
+                }
+            }
         }
     }
 
