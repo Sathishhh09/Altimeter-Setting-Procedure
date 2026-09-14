@@ -1,6 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
-using TMPro; // Added for TextMeshPro UI support
+using TMPro;
 
 public class TransitionLayerManager : MonoBehaviour
 {
@@ -11,15 +11,15 @@ public class TransitionLayerManager : MonoBehaviour
         public int pageIndex = 1;
 
         [Header("Transition Boundaries (Altitude in Feet)")]
-        [Tooltip("Starting transition limit (e.g. 3500, 4000, 4500...).")]
+        [Tooltip("Starting transition limit.")]
         [Range(3500f, 7000f)]
         public float startTransitionLayerLimit = 3500f;
 
-        [Tooltip("Caution threshold limit (e.g. 4000, 4500, 5000...).")]
+        [Tooltip("Caution threshold limit.")]
         [Range(3500f, 7000f)]
         public float cautionLimit = 4000f;
 
-        [Tooltip("Ending transition limit (e.g. 4500, 5000, 5500...).")]
+        [Tooltip("Ending transition limit.")]
         [Range(3500f, 7000f)]
         public float endTransitionLayerLimit = 4500f;
 
@@ -31,10 +31,10 @@ public class TransitionLayerManager : MonoBehaviour
         [Tooltip("If checked (true), starting and ending GameObjects will NOT be enabled automatically.")]
         public bool bypassObjectActivation = false;
 
-        [Tooltip("GameObjects to enable when altitude reaches or exceeds startTransitionLayerLimit.")]
+        [Tooltip("GameObjects to enable when altitude reaches start transition limit.")]
         public GameObject[] startTargetGameObjects;
 
-        [Tooltip("GameObjects to enable when altitude reaches or exceeds endTransitionLayerLimit.")]
+        [Tooltip("GameObjects to enable when altitude reaches end transition limit.")]
         public GameObject[] endTargetGameObjects;
 
         [Header("Unlock Rules")]
@@ -42,8 +42,10 @@ public class TransitionLayerManager : MonoBehaviour
         public bool autoUnlockNavigation = true;
 
         /// <summary>
-        /// Validates that altitude levels follow strict 500 ft step increments.
+        /// True if altitude increases through this step (e.g. 3500 -> 4500), False if descending (e.g. 5000 -> 4000).
         /// </summary>
+        public bool IsAscending => endTransitionLayerLimit >= startTransitionLayerLimit;
+
         public void ValidateSteps()
         {
             startTransitionLayerLimit = SnapToStep(startTransitionLayerLimit, 500f, 3500f, 7000f);
@@ -57,9 +59,6 @@ public class TransitionLayerManager : MonoBehaviour
             return Mathf.Clamp(snapped, min, max);
         }
 
-        /// <summary>
-        /// Updates the assigned TMP_Text component with the current start transition limit value.
-        /// </summary>
         public void UpdateUI()
         {
             if (startTransitionText != null)
@@ -70,19 +69,15 @@ public class TransitionLayerManager : MonoBehaviour
     }
 
     [Header("Global UI Reference")]
-    [Tooltip("Text component used to display the real-time current transition level / altitude.")]
     [SerializeField] private TMP_Text currentTransitionLevelText;
 
     [Header("Page Navigation Sync")]
-    [Tooltip("Configure transition layer rules and limits for each specific page index.")]
     [SerializeField] private List<PageTransitionConfig> pageConfigs = new();
 
     [Header("Flight Data Source")]
-    [Tooltip("Reference to the script supplying the altitude value.")]
     [SerializeField] private A320PFD altimeterController;
 
     [Header("Runtime State")]
-    [Tooltip("The current progress of the transition (read-only in runtime).")]
     [SerializeField] private float currentTransitionLevel = 0f;
 
     // Internal State
@@ -92,13 +87,11 @@ public class TransitionLayerManager : MonoBehaviour
     private readonly HashSet<int> endActivatedPages = new();
     private PageTransitionConfig activeConfig;
 
-    // Public Properties
     public float CurrentTransitionLevel => currentTransitionLevel;
     public PageTransitionConfig ActiveConfig => activeConfig;
 
     private void OnValidate()
     {
-        // Enforce 500ft increments within [3500, 7000] inside Unity Inspector
         if (pageConfigs != null)
         {
             foreach (var config in pageConfigs)
@@ -125,22 +118,18 @@ public class TransitionLayerManager : MonoBehaviour
             altimeterController = FindFirstObjectByType<A320PFD>();
         }
 
-        // Initialize active config for current starting page
         UpdateActiveConfig(PageNavigationController.CurrentIndex);
     }
 
     private void Update()
     {
-        // Update transition level directly from PFD altimeter
         if (altimeterController != null)
         {
             currentTransitionLevel = altimeterController.altitude;
         }
 
-        // Display current altitude in FT on the UI text component
         UpdateCurrentTransitionLevelUI();
 
-        // Evaluate rules and update UI if current page has an assigned configuration
         if (activeConfig != null)
         {
             activeConfig.UpdateUI();
@@ -151,9 +140,6 @@ public class TransitionLayerManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Updates the assigned global text component with the current transition level.
-    /// </summary>
     private void UpdateCurrentTransitionLevelUI()
     {
         if (currentTransitionLevelText != null)
@@ -167,9 +153,6 @@ public class TransitionLayerManager : MonoBehaviour
         UpdateActiveConfig(newPageIndex);
     }
 
-    /// <summary>
-    /// Finds and sets the configuration active for the current page index.
-    /// </summary>
     private void UpdateActiveConfig(int pageIndex)
     {
         activeConfig = pageConfigs.Find(config => config.pageIndex == pageIndex);
@@ -180,18 +163,20 @@ public class TransitionLayerManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Checks if altitude reached the start limit and enables designated start GameObjects (unless bypassed).
-    /// </summary>
     private void CheckStartTransitionLimit(PageTransitionConfig config)
     {
         if (startActivatedPages.Contains(config.pageIndex)) return;
 
-        if (currentTransitionLevel >= config.startTransitionLayerLimit)
+        // Check direction: Ascending (>=) vs Descending (<=)
+        bool limitReached = config.IsAscending 
+            ? currentTransitionLevel >= config.startTransitionLayerLimit 
+            : currentTransitionLevel <= config.startTransitionLayerLimit;
+
+        if (limitReached)
         {
             if (!config.bypassObjectActivation)
             {
-                if (config.startTargetGameObjects != null && config.startTargetGameObjects.Length > 0)
+                if (config.startTargetGameObjects != null)
                 {
                     foreach (GameObject obj in config.startTargetGameObjects)
                     {
@@ -207,37 +192,40 @@ public class TransitionLayerManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Checks if the altitude exceeds the caution limit for the active page configuration and prints a caution message.
-    /// </summary>
     private void CheckCautionLimit(PageTransitionConfig config)
     {
         bool isTriggered = cautionTriggeredPages.Contains(config.pageIndex);
 
-        if (currentTransitionLevel > config.cautionLimit && !isTriggered)
+        bool hasPassedCaution = config.IsAscending
+            ? currentTransitionLevel > config.cautionLimit
+            : currentTransitionLevel < config.cautionLimit;
+
+        if (hasPassedCaution && !isTriggered)
         {
-            Debug.LogWarning($"⚠️ CAUTION: Altitude has crossed the caution limit! Page: {config.pageIndex} | Current Altitude: {currentTransitionLevel:F0} ft | Caution Limit: {config.cautionLimit:F0} ft");
+            Debug.LogWarning($"⚠️ CAUTION: Altitude has crossed caution limit! Page: {config.pageIndex} | Current: {currentTransitionLevel:F0} ft | Limit: {config.cautionLimit:F0} ft");
             cautionTriggeredPages.Add(config.pageIndex);
         }
-        else if (currentTransitionLevel <= config.cautionLimit && isTriggered)
+        else if (!hasPassedCaution && isTriggered)
         {
-            Debug.Log($"[TransitionLayerManager] Altitude returned below caution limit on Page {config.pageIndex} ({currentTransitionLevel:F0} ft). Resetting caution state.");
+            Debug.Log($"[TransitionLayerManager] Altitude returned inside normal limit on Page {config.pageIndex}. Resetting caution state.");
             cautionTriggeredPages.Remove(config.pageIndex);
         }
     }
 
-    /// <summary>
-    /// Checks if altitude reached end transition limit and enables designated end GameObjects (unless bypassed).
-    /// </summary>
     private void CheckEndTransitionLimit(PageTransitionConfig config)
     {
         if (endActivatedPages.Contains(config.pageIndex)) return;
 
-        if (currentTransitionLevel >= config.endTransitionLayerLimit)
+        // Check direction: Ascending (>=) vs Descending (<=)
+        bool limitReached = config.IsAscending
+            ? currentTransitionLevel >= config.endTransitionLayerLimit
+            : currentTransitionLevel <= config.endTransitionLayerLimit;
+
+        if (limitReached)
         {
             if (!config.bypassObjectActivation)
             {
-                if (config.endTargetGameObjects != null && config.endTargetGameObjects.Length > 0)
+                if (config.endTargetGameObjects != null)
                 {
                     foreach (GameObject obj in config.endTargetGameObjects)
                     {
@@ -253,14 +241,15 @@ public class TransitionLayerManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Checks if the current altitude passes the page's caution threshold to trigger unlock.
-    /// </summary>
     private void EvaluatePageCompletion(PageTransitionConfig config)
     {
         if (completedPages.Contains(config.pageIndex)) return;
 
-        if (currentTransitionLevel >= config.cautionLimit)
+        bool isMet = config.IsAscending
+            ? currentTransitionLevel >= config.cautionLimit
+            : currentTransitionLevel <= config.cautionLimit;
+
+        if (isMet)
         {
             completedPages.Add(config.pageIndex);
             Debug.Log($"[TransitionLayerManager] Page {config.pageIndex} transition condition met at {currentTransitionLevel:F0} ft. Unlocking navigation.");
@@ -272,30 +261,21 @@ public class TransitionLayerManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Helper method to fetch configured settings for any specific page index.
-    /// </summary>
     public PageTransitionConfig GetConfigForPage(int pageIndex)
     {
         return pageConfigs.Find(config => config.pageIndex == pageIndex);
     }
 
-    /// <summary>
-    /// Returns 0.0 to 1.0 progress representing current altitude within active transition bounds.
-    /// </summary>
     public float GetNormalizedProgress()
     {
         if (activeConfig == null) return 0f;
         float range = activeConfig.endTransitionLayerLimit - activeConfig.startTransitionLayerLimit;
-        if (range <= 0f) return 0f;
+        if (Mathf.Approximately(range, 0f)) return 0f;
 
+        // Progress works bidirectional (0.0 at start limit -> 1.0 at end limit)
         return Mathf.Clamp01((currentTransitionLevel - activeConfig.startTransitionLayerLimit) / range);
     }
 
-    /// <summary>
-    /// Enables bypassObjectActivation for the specified page index.
-    /// </summary>
-    /// <param name="pageIndex">The target page index (e.g., 2)</param>
     public void EnableBypassForPage(int pageIndex)
     {
         PageTransitionConfig config = GetConfigForPage(pageIndex);
@@ -303,10 +283,6 @@ public class TransitionLayerManager : MonoBehaviour
         {
             config.bypassObjectActivation = true;
             Debug.Log($"[TransitionLayerManager] Enabled bypassObjectActivation for Page {pageIndex}");
-        }
-        else
-        {
-            Debug.LogWarning($"[TransitionLayerManager] Could not find configuration for Page {pageIndex}");
         }
     }
 }

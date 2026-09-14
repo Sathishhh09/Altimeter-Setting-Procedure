@@ -13,6 +13,13 @@ public class A320PFD : MonoBehaviour
     // ==================================================
     // Custom Data Structure for Page Settings
     // ==================================================
+    public enum AltitudeChangeDirection
+    {
+        Increase,
+        Decrease,
+        Maintain
+    }
+
     [System.Serializable]
     public struct PageAltimeterConfig
     {
@@ -25,7 +32,10 @@ public class A320PFD : MonoBehaviour
         [Tooltip("Target baseline altitude applied when entering this page (if Use Page Altitude is true).")]
         public float pageAltitude;
 
-        [Tooltip("Altimeter speed value for this specific page.")]
+        [Tooltip("Select whether altitude should increase, decrease, or remain flat.")]
+        public AltitudeChangeDirection changeDirection;
+
+        [Tooltip("Altimeter speed/rate value for this specific page (always positive).")]
         public float altimeterSpeed;
     }
 
@@ -58,10 +68,13 @@ public class A320PFD : MonoBehaviour
     [Min(0f)] public float speedRollDeviation = 15f;
 
     [Header("Altitude Dynamics")]
+    [Tooltip("Default direction altitude changes if not defined in the page list.")]
+    public AltitudeChangeDirection altimeterDirection = AltitudeChangeDirection.Increase;
+
     [Tooltip("Default speed/rate at which altitude changes (feet/second) if not defined in the page list.")]
     public float altimeterSpeed = 10f;
 
-    [Tooltip("Per-page configuration list for altimeter speeds and page altitudes.")]
+    [Tooltip("Per-page configuration list for altimeter speeds, directions, and page altitudes.")]
     [SerializeField] private List<PageAltimeterConfig> pageAltimeterSpeeds = new List<PageAltimeterConfig>();
 
     [Tooltip("When on, displayed altitude includes a bounded offset based on Roll Input.")]
@@ -240,6 +253,7 @@ public class A320PFD : MonoBehaviour
                 }
 
                 altimeterSpeed = pageAltimeterSpeeds[i].altimeterSpeed;
+                altimeterDirection = pageAltimeterSpeeds[i].changeDirection;
                 return;
             }
         }
@@ -672,7 +686,18 @@ public class A320PFD : MonoBehaviour
     // ==================================================
     private void UpdateAltitudeFromSpeed()
     {
-        altitude += altimeterSpeed * Time.deltaTime;
+        switch (altimeterDirection)
+        {
+            case AltitudeChangeDirection.Increase:
+                altitude += Mathf.Abs(altimeterSpeed) * Time.deltaTime;
+                break;
+            case AltitudeChangeDirection.Decrease:
+                altitude -= Mathf.Abs(altimeterSpeed) * Time.deltaTime;
+                break;
+            case AltitudeChangeDirection.Maintain:
+                // No altitude change
+                break;
+        }
     }
 
     private void UpdateRoll()
