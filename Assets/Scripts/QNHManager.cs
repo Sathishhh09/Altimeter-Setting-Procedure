@@ -219,7 +219,7 @@ public class QNHManager : MonoBehaviour
         if (validateButton != null)
         {
             validateButton.onClick.RemoveAllListeners();
-            validateButton.onClick.AddListener(ValidateQNH);
+            validateButton.onClick.AddListener(OnValidatePressed);
         }
 
         if (autoFillButton != null)
@@ -300,7 +300,6 @@ public class QNHManager : MonoBehaviour
 
     private void SetupPageTargetQNH(int pageIndex)
     {
-        // Guard check: Avoid setting targets or throwing errors if this page has no QNH configuration
         if (!pageConfigurations.Exists(c => c.pageIndex == pageIndex))
         {
             return;
@@ -324,14 +323,12 @@ public class QNHManager : MonoBehaviour
             return defaultTargetQNH;
         }
 
-        // Generate dynamically ONLY if specified and value is not yet set
         if (config.answerMode == QNHAnswerMode.DynamicRandom && config.generatedTargetQNH == 0f)
         {
             config.generatedTargetQNH = Random.Range(minQNHRange, maxQNHRange + 1);
             Debug.Log($"[QNHManager] Dynamically Generated QNH {config.generatedTargetQNH} for page index {pageIndex}");
         }
 
-        // Calculate value to show on UI Text
         float activeTargetValue = config.answerMode switch
         {
             QNHAnswerMode.StaticAnswer => config.correctAnswer,
@@ -369,6 +366,59 @@ public class QNHManager : MonoBehaviour
         {
             currentTargetQNH = config.generatedTargetQNH;
         }
+    }
+
+    // ============================================================
+    // NUMPAD / KEYPAD INPUT HANDLING
+    // ============================================================
+
+    public void OnDigitPressed(string digit)
+    {
+        if (solved || isValidating || ActiveInputField == null || !ActiveInputField.interactable)
+            return;
+
+        HideFeedback();
+
+        int maxLength = ActiveAnswer.ToString().Contains(".") ? 6 : 4;
+        if (ActiveInputField.text.Length >= maxLength)
+            return;
+
+        ActiveInputField.text += digit;
+    }
+
+    public void OnDecimalPressed()
+    {
+        if (solved || isValidating || ActiveInputField == null || !ActiveInputField.interactable)
+            return;
+
+        HideFeedback();
+
+        int maxLength = ActiveAnswer.ToString().Contains(".") ? 6 : 4;
+        if (ActiveInputField.text.Length >= maxLength)
+            return;
+
+        if (!ActiveInputField.text.Contains("."))
+        {
+            ActiveInputField.text = string.IsNullOrEmpty(ActiveInputField.text) ? "0." : ActiveInputField.text + ".";
+        }
+    }
+
+    public void OnBackspacePressed()
+    {
+        if (solved || isValidating || ActiveInputField == null || !ActiveInputField.interactable)
+            return;
+
+        HideFeedback();
+
+        if (ActiveInputField.text.Length > 0)
+        {
+            ActiveInputField.text = ActiveInputField.text.Substring(0, ActiveInputField.text.Length - 1);
+        }
+    }
+
+    public void OnValidatePressed()
+    {
+        ValidateQNH();
     }
 
     // ============================================================
@@ -475,7 +525,6 @@ public class QNHManager : MonoBehaviour
 
             EnableFieldObjects(current, true);
 
-            // Triggers page-specific correct answer event
             current.onPageCorrectAnswer?.Invoke();
         }
 
@@ -724,7 +773,6 @@ public class QNHManager : MonoBehaviour
             config.solved = false;
             config.currentEnteredValue = 0f;
 
-            // Reset dynamic generated target so it can roll fresh if configured as DynamicRandom
             if (config.answerMode == QNHAnswerMode.DynamicRandom)
             {
                 config.generatedTargetQNH = 0f;

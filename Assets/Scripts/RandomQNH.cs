@@ -40,6 +40,71 @@ public class RandomQNH : MonoBehaviour
             wrongObject.SetActive(false);
     }
 
+    // ============================================================
+    // NUMPAD / KEYPAD INPUT CONTROLLER METHODS
+    // ============================================================
+
+    /// <summary>
+    /// Call this from Numpad Digit Buttons (e.g., 0-9) passing the digit string.
+    /// </summary>
+    public void OnDigitPressed(string digit)
+    {
+        if (qnhInput == null || !qnhInput.interactable)
+            return;
+
+        int maxLength = 4; // Adjust to 6 if accepting decimals (e.g., 1013.25)
+        if (qnhInput.text.Length >= maxLength)
+            return;
+
+        qnhInput.text += digit;
+    }
+
+    /// <summary>
+    /// Call this from the Numpad Decimal '.' Button.
+    /// </summary>
+    public void OnDecimalPressed()
+    {
+        if (qnhInput == null || !qnhInput.interactable)
+            return;
+
+        if (qnhInput.text.Length >= 6)
+            return;
+
+        if (!qnhInput.text.Contains("."))
+        {
+            qnhInput.text = string.IsNullOrEmpty(qnhInput.text) ? "0." : qnhInput.text + ".";
+        }
+    }
+
+    /// <summary>
+    /// Call this from the Numpad Backspace/Delete Button.
+    /// </summary>
+    public void OnBackspacePressed()
+    {
+        if (qnhInput == null || !qnhInput.interactable)
+            return;
+
+        if (qnhInput.text.Length > 0)
+        {
+            qnhInput.text = qnhInput.text.Substring(0, qnhInput.text.Length - 1);
+        }
+    }
+
+    /// <summary>
+    /// Call this from the Numpad Clear 'C' Button.
+    /// </summary>
+    public void OnClearPressed()
+    {
+        if (qnhInput == null || !qnhInput.interactable)
+            return;
+
+        qnhInput.text = string.Empty;
+    }
+
+    // ============================================================
+    // VALIDATION LOGIC
+    // ============================================================
+
     public void CheckQNH()
     {
         if (qnhInput == null)
@@ -48,7 +113,7 @@ public class RandomQNH : MonoBehaviour
         // Try to convert player input to an integer
         if (int.TryParse(qnhInput.text, out int playerQNH))
         {
-            // Check whether the value is between 1001 and 1025
+            // Check whether the value is between minQNH and maxQNH
             if (playerQNH >= minQNH && playerQNH <= maxQNH)
             {
                 ShowCorrect();
@@ -115,6 +180,14 @@ public class RandomQNH : MonoBehaviour
         // Hide wrong object
         if (wrongObject != null)
             wrongObject.SetActive(false);
+
+        // Reset input field on wrong entry for retry
+        if (qnhInput != null)
+        {
+            qnhInput.text = string.Empty;
+            qnhInput.Select();
+            qnhInput.ActivateInputField();
+        }
 
         feedbackCoroutine = null;
     }
