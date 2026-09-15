@@ -18,7 +18,9 @@ public class QNHManager : MonoBehaviour
         [Tooltip("Uses the pre-entered 'generatedTargetQNH' field directly as the correct answer.")]
         PresetGenerated,
         [Tooltip("Uses the 'correctAnswer' field as the correct answer.")]
-        StaticAnswer
+        StaticAnswer,
+        [Tooltip("Validates if the entered value falls between a user-defined minimum and maximum range.")]
+        RangeAnswer
     }
 
     [System.Serializable]
@@ -51,6 +53,13 @@ public class QNHManager : MonoBehaviour
         [Header("Static Answer Settings")]
         [Tooltip("Static answer used when Answer Mode is set to StaticAnswer.")]
         public float correctAnswer;
+
+        [Header("Range Answer Settings")]
+        [Tooltip("Minimum threshold for acceptable input when Answer Mode is set to RangeAnswer.")]
+        public float minCorrectRange;
+
+        [Tooltip("Maximum threshold for acceptable input when Answer Mode is set to RangeAnswer.")]
+        public float maxCorrectRange;
 
         [Header("Auto-Fill Settings")]
         [Tooltip("If TRUE: field will automatically validate without waiting for user input.")]
@@ -178,6 +187,10 @@ public class QNHManager : MonoBehaviour
                 case QNHAnswerMode.StaticAnswer:
                     return CurrentConfig.correctAnswer;
 
+                case QNHAnswerMode.RangeAnswer:
+                    // Return average of range for auto-fill or text preview purposes
+                    return (CurrentConfig.minCorrectRange + CurrentConfig.maxCorrectRange) / 2f;
+
                 default:
                     return CurrentConfig.correctAnswer;
             }
@@ -201,9 +214,6 @@ public class QNHManager : MonoBehaviour
 
     private void Start()
     {
-        // --------------------------------------------------------
-        // INPUT FIELD LISTENERS
-        // --------------------------------------------------------
         foreach (PageQNHConfig config in pageConfigurations)
         {
             if (config.inputField != null)
@@ -213,9 +223,6 @@ public class QNHManager : MonoBehaviour
             }
         }
 
-        // --------------------------------------------------------
-        // BUTTON LISTENERS
-        // --------------------------------------------------------
         if (validateButton != null)
         {
             validateButton.onClick.RemoveAllListeners();
@@ -228,9 +235,6 @@ public class QNHManager : MonoBehaviour
             autoFillButton.onClick.AddListener(AutoFill);
         }
 
-        // --------------------------------------------------------
-        // INITIALIZATION
-        // --------------------------------------------------------
         ResetAll();
         SetupPageTargetQNH(PageNavigationController.CurrentIndex);
         HideFeedback();
@@ -245,9 +249,6 @@ public class QNHManager : MonoBehaviour
         HideFeedback();
         SetupPageTargetQNH(pageIndex);
 
-        // --------------------------------------------------------
-        // BACKWARD NAVIGATION HANDLING
-        // --------------------------------------------------------
         if (previousPageIndex > pageIndex)
         {
             for (int i = 0; i < pageConfigurations.Count; i++)
@@ -274,9 +275,6 @@ public class QNHManager : MonoBehaviour
             }
         }
 
-        // --------------------------------------------------------
-        // RESTORE SAVED VALUES
-        // --------------------------------------------------------
         for (int i = 0; i < pageConfigurations.Count; i++)
         {
             PageQNHConfig config = pageConfigurations[i];
@@ -332,12 +330,20 @@ public class QNHManager : MonoBehaviour
         float activeTargetValue = config.answerMode switch
         {
             QNHAnswerMode.StaticAnswer => config.correctAnswer,
+            QNHAnswerMode.RangeAnswer => config.minCorrectRange, // Displays lower threshold on UI text element by default
             _ => config.generatedTargetQNH
         };
 
         if (config.qnhDisplayText != null)
         {
-            config.qnhDisplayText.text = activeTargetValue.ToString("F0");
+            if (config.answerMode == QNHAnswerMode.RangeAnswer)
+            {
+                config.qnhDisplayText.text = $"{config.minCorrectRange:F0}-{config.maxCorrectRange:F0}";
+            }
+            else
+            {
+                config.qnhDisplayText.text = activeTargetValue.ToString("F0");
+            }
         }
 
         return activeTargetValue;
@@ -470,9 +476,20 @@ public class QNHManager : MonoBehaviour
         if (solved || isValidating || CurrentConfig == null) return;
 
         PageQNHConfig current = CurrentConfig;
-        float targetAnswer = ActiveAnswer;
+        bool isCorrect = false;
 
-        if (Mathf.Abs(current.currentEnteredValue - targetAnswer) > matchTolerance)
+        if (current.answerMode == QNHAnswerMode.RangeAnswer)
+        {
+            isCorrect = current.currentEnteredValue >= current.minCorrectRange && 
+                        current.currentEnteredValue <= current.maxCorrectRange;
+        }
+        else
+        {
+            float targetAnswer = ActiveAnswer;
+            isCorrect = Mathf.Abs(current.currentEnteredValue - targetAnswer) <= matchTolerance;
+        }
+
+        if (!isCorrect)
         {
             wrongAttempts++;
 
@@ -569,6 +586,7 @@ public class QNHManager : MonoBehaviour
         float targetValue = targetField.answerMode switch
         {
             QNHAnswerMode.StaticAnswer => targetField.correctAnswer,
+            QNHAnswerMode.RangeAnswer => (targetField.minCorrectRange + targetField.maxCorrectRange) / 2f,
             _ => GetTargetQNHForPage(targetField.pageIndex)
         };
 
