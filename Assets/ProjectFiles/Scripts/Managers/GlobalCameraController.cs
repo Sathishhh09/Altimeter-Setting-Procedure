@@ -132,6 +132,23 @@ public class GlobalCameraController : MonoBehaviour
         StartMove(config);
     }
 
+    /// <summary>
+    /// Moves directly to a target over a duration using raw linear interpolation instead of an ease curve.
+    /// </summary>
+    public void MoveToSudden(Transform target)
+    {
+        if (target == null) return;
+
+        CameraPointConfig suddenConfig = new CameraPointConfig{
+            target = target,
+            isInstantSnap = true,
+            moveDuration = 0f,
+            easeCurve = null
+        };
+
+        StartMove(suddenConfig);
+    }
+
     // ================= MOVEMENT CORE =================
 
     private void StartMove(CameraPointConfig config)

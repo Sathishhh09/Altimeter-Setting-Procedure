@@ -185,7 +185,7 @@ public class QNHManager : MonoBehaviour
             {
                 case QNHAnswerMode.DynamicRandom:
                 case QNHAnswerMode.PresetGenerated:
-                    return GetTargetQNHForPage(CurrentConfig.pageIndex);
+                    return GetTargetQNHForConfig(CurrentConfig);
 
                 case QNHAnswerMode.StaticAnswer:
                     return CurrentConfig.correctAnswer;
@@ -193,7 +193,6 @@ public class QNHManager : MonoBehaviour
                 case QNHAnswerMode.RangeAnswer:
                     float targetVal = (CurrentConfig.minCorrectRange + CurrentConfig.maxCorrectRange) / 2f;
                     
-                    // If the calculated auto-fill value hits the excluded value, offset it to maintain validity
                     if (CurrentConfig.exceptValue != 0f && Mathf.Abs(targetVal - CurrentConfig.exceptValue) <= matchTolerance)
                     {
                         targetVal += 1f;
@@ -307,33 +306,29 @@ public class QNHManager : MonoBehaviour
 
     private void SetupPageTargetQNH(int pageIndex)
     {
-        if (!pageConfigurations.Exists(c => c.pageIndex == pageIndex))
+        if (CurrentConfig != null)
         {
-            return;
+            currentTargetQNH = GetTargetQNHForConfig(CurrentConfig);
+            onTargetReached?.Invoke();
         }
-
-        currentTargetQNH = GetTargetQNHForPage(pageIndex);
-        onTargetReached?.Invoke();
     }
 
     // ============================================================
     // TARGET QNH GENERATION & RETRIEVAL
     // ============================================================
 
-    public float GetTargetQNHForPage(int pageIndex)
+    public float GetTargetQNHForConfig(PageQNHConfig config)
     {
-        PageQNHConfig config = pageConfigurations.Find(c => c.pageIndex == pageIndex);
-
         if (config == null)
         {
-            Debug.LogWarning($"[QNHManager] No QNH configuration found for page index {pageIndex}. Returning default target value.");
+            Debug.LogWarning("[QNHManager] Configuration is null. Returning default target value.");
             return defaultTargetQNH;
         }
 
         if (config.answerMode == QNHAnswerMode.DynamicRandom && config.generatedTargetQNH == 0f)
         {
             config.generatedTargetQNH = Random.Range(minQNHRange, maxQNHRange + 1);
-            Debug.Log($"[QNHManager] Dynamically Generated QNH {config.generatedTargetQNH} for page index {pageIndex}");
+            Debug.Log($"[QNHManager] Dynamically Generated QNH {config.generatedTargetQNH} for page index {config.pageIndex}");
         }
 
         float activeTargetValue = config.answerMode switch
@@ -365,11 +360,17 @@ public class QNHManager : MonoBehaviour
         return activeTargetValue;
     }
 
+    public float GetTargetQNHForPage(int pageIndex)
+    {
+        PageQNHConfig config = pageConfigurations.Find(c => c.pageIndex == pageIndex && !c.solved) ?? pageConfigurations.Find(c => c.pageIndex == pageIndex);
+        return GetTargetQNHForConfig(config);
+    }
+
     public float GetCurrentTargetQNH() => currentTargetQNH;
 
     public void RegenerateQNHForPage(int pageIndex)
     {
-        PageQNHConfig config = pageConfigurations.Find(c => c.pageIndex == pageIndex);
+        PageQNHConfig config = pageConfigurations.Find(c => c.pageIndex == pageIndex && !c.solved) ?? pageConfigurations.Find(c => c.pageIndex == pageIndex);
 
         if (config == null)
         {
@@ -384,7 +385,7 @@ public class QNHManager : MonoBehaviour
             config.qnhDisplayText.text = config.generatedTargetQNH.ToString("F0");
         }
 
-        if (PageNavigationController.CurrentIndex == pageIndex)
+        if (PageNavigationController.CurrentIndex == pageIndex && CurrentConfig == config)
         {
             currentTargetQNH = config.generatedTargetQNH;
         }
@@ -592,6 +593,15 @@ public class QNHManager : MonoBehaviour
             return;
         }
 
+        // Setup target display for Phase 2 if staying on the same page
+        SetupPageTargetQNH(PageNavigationController.CurrentIndex);
+
+        // If Phase 1 and Phase 2 share the same input field, reset its text for Phase 2
+        if (nextField.inputField != null && string.IsNullOrEmpty(nextField.inputField.text))
+        {
+            nextField.inputField.text = "";
+        }
+
         ActivateOnlyCurrentField();
     }
 
@@ -608,7 +618,7 @@ public class QNHManager : MonoBehaviour
         {
             QNHAnswerMode.StaticAnswer => targetField.correctAnswer,
             QNHAnswerMode.RangeAnswer => ActiveAnswer,
-            _ => GetTargetQNHForPage(targetField.pageIndex)
+            _ => GetTargetQNHForConfig(targetField)
         };
 
         targetField.currentEnteredValue = targetValue;
