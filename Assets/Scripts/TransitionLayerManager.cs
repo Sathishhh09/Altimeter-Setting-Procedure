@@ -6,7 +6,9 @@ using TMPro;
 
 public class TransitionLayerManager : MonoBehaviour
 {
+    // C# Events triggered when targets are activated (passing pageIndex)
     public static event Action<int> OnStartObjectsActivated;
+    public static event Action<int> OnCautionObjectsActivated;
     public static event Action<int> OnEndObjectsActivated;
 
     [System.Serializable]
@@ -33,17 +35,21 @@ public class TransitionLayerManager : MonoBehaviour
         public TMP_Text startTransitionText;
 
         [Header("Object Activation")]
-        [Tooltip("If checked (true), starting and ending GameObjects will NOT be enabled automatically.")]
+        [Tooltip("If checked (true), starting, caution, and ending GameObjects will NOT be enabled automatically.")]
         public bool bypassObjectActivation = false;
 
         [Tooltip("GameObjects to enable when altitude reaches start transition limit.")]
         public GameObject[] startTargetGameObjects;
+
+        [Tooltip("GameObjects to enable when altitude reaches caution limit.")]
+        public GameObject[] cautionTargetGameObjects;
 
         [Tooltip("GameObjects to enable when altitude reaches end transition limit.")]
         public GameObject[] endTargetGameObjects;
 
         [Header("Inspector UI Triggers")]
         public UnityEvent onStartLimitReached;
+        public UnityEvent onCautionLimitReached;
         public UnityEvent onEndLimitReached;
 
         [Header("Unlock Rules")]
@@ -89,6 +95,7 @@ public class TransitionLayerManager : MonoBehaviour
     private readonly HashSet<int> cautionTriggeredPages = new();
     private readonly HashSet<int> completedPages = new();
     private readonly HashSet<int> startActivatedPages = new();
+    private readonly HashSet<int> cautionActivatedPages = new();
     private readonly HashSet<int> endActivatedPages = new();
     private PageTransitionConfig activeConfig;
     private int currentLoadedPageIndex = -1;
@@ -173,6 +180,7 @@ public class TransitionLayerManager : MonoBehaviour
         {
             // Reset cached activation states for re-visited pages
             startActivatedPages.Remove(pageIndex);
+            cautionActivatedPages.Remove(pageIndex);
             endActivatedPages.Remove(pageIndex);
             cautionTriggeredPages.Remove(pageIndex);
             completedPages.Remove(pageIndex);
@@ -186,25 +194,20 @@ public class TransitionLayerManager : MonoBehaviour
         PageTransitionConfig config = GetConfigForPage(pageIndex);
         if (config == null) return;
 
-        if (config.startTargetGameObjects != null)
-        {
-            foreach (GameObject obj in config.startTargetGameObjects)
-            {
-                if (obj != null && obj.activeSelf)
-                {
-                    obj.SetActive(false);
-                }
-            }
-        }
+        DeactivateObjects(config.startTargetGameObjects);
+        DeactivateObjects(config.cautionTargetGameObjects);
+        DeactivateObjects(config.endTargetGameObjects);
+    }
 
-        if (config.endTargetGameObjects != null)
+    private void DeactivateObjects(GameObject[] targetObjects)
+    {
+        if (targetObjects == null) return;
+
+        foreach (GameObject obj in targetObjects)
         {
-            foreach (GameObject obj in config.endTargetGameObjects)
+            if (obj != null && obj.activeSelf)
             {
-                if (obj != null && obj.activeSelf)
-                {
-                    obj.SetActive(false);
-                }
+                obj.SetActive(false);
             }
         }
     }
@@ -213,7 +216,6 @@ public class TransitionLayerManager : MonoBehaviour
     {
         if (startActivatedPages.Contains(config.pageIndex)) return;
 
-        // Force activation if starting altitude is already past boundary on page load
         bool limitReached = config.IsAscending 
             ? currentTransitionLevel >= config.startTransitionLayerLimit 
             : currentTransitionLevel <= config.startTransitionLayerLimit;
@@ -241,20 +243,41 @@ public class TransitionLayerManager : MonoBehaviour
 
     private void CheckCautionLimit(PageTransitionConfig config)
     {
-        bool isTriggered = cautionTriggeredPages.Contains(config.pageIndex);
-
         bool hasPassedCaution = config.IsAscending
-            ? currentTransitionLevel > config.cautionLimit
-            : currentTransitionLevel < config.cautionLimit;
+            ? currentTransitionLevel >= config.cautionLimit
+            : currentTransitionLevel <= config.cautionLimit;
 
-        if (hasPassedCaution && !isTriggered)
+        if (hasPassedCaution)
         {
-            cautionTriggeredPages.Add(config.pageIndex);
+            if (!cautionActivatedPages.Contains(config.pageIndex))
+            {
+                TriggerCautionActivation(config);
+            }
+
+            if (!cautionTriggeredPages.Contains(config.pageIndex))
+            {
+                cautionTriggeredPages.Add(config.pageIndex);
+            }
         }
-        else if (!hasPassedCaution && isTriggered)
+        else if (cautionTriggeredPages.Contains(config.pageIndex))
         {
             cautionTriggeredPages.Remove(config.pageIndex);
         }
+    }
+
+    public void TriggerCautionActivation(PageTransitionConfig config)
+    {
+        if (!config.bypassObjectActivation && config.cautionTargetGameObjects != null)
+        {
+            foreach (GameObject obj in config.cautionTargetGameObjects)
+            {
+                if (obj != null) obj.SetActive(true);
+            }
+        }
+
+        cautionActivatedPages.Add(config.pageIndex);
+        config.onCautionLimitReached?.Invoke();
+        OnCautionObjectsActivated?.Invoke(config.pageIndex);
     }
 
     private void CheckEndTransitionLimit(PageTransitionConfig config)

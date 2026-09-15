@@ -32,6 +32,9 @@ public class A320PFD : MonoBehaviour
         [Tooltip("Target baseline altitude applied when entering this page (if Use Page Altitude is true).")]
         public float pageAltitude;
 
+        [Tooltip("Maximum allowed altitude for this page. Altitude will not exceed this value when increasing.")]
+        public float pageMaximumAltitude;
+
         [Tooltip("Select whether altitude should increase, decrease, or remain flat.")]
         public AltitudeChangeDirection changeDirection;
 
@@ -197,6 +200,7 @@ public class A320PFD : MonoBehaviour
     [HideInInspector] [SerializeField] private float displayHeading;
     [HideInInspector] [SerializeField] private float headingVelocity;
 
+    private float? currentMaxAltitude = null;
     private static Font cachedFont;
 
     // ==================================================
@@ -239,6 +243,8 @@ public class A320PFD : MonoBehaviour
 
     private void SetAltimeterSpeedForPage(int targetPageIndex)
     {
+        currentMaxAltitude = null;
+
         if (pageAltimeterSpeeds == null)
             return;
 
@@ -254,6 +260,7 @@ public class A320PFD : MonoBehaviour
 
                 altimeterSpeed = pageAltimeterSpeeds[i].altimeterSpeed;
                 altimeterDirection = pageAltimeterSpeeds[i].changeDirection;
+                currentMaxAltitude = pageAltimeterSpeeds[i].pageMaximumAltitude;
                 return;
             }
         }
@@ -690,6 +697,10 @@ public class A320PFD : MonoBehaviour
         {
             case AltitudeChangeDirection.Increase:
                 altitude += Mathf.Abs(altimeterSpeed) * Time.deltaTime;
+                if (currentMaxAltitude.HasValue && altitude > currentMaxAltitude.Value)
+                {
+                    altitude = currentMaxAltitude.Value;
+                }
                 break;
             case AltitudeChangeDirection.Decrease:
                 altitude -= Mathf.Abs(altimeterSpeed) * Time.deltaTime;
