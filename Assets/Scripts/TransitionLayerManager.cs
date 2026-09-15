@@ -1,9 +1,14 @@
 using UnityEngine;
+using UnityEngine.Events;
+using System;
 using System.Collections.Generic;
 using TMPro;
 
 public class TransitionLayerManager : MonoBehaviour
 {
+    public static event Action<int> OnStartObjectsActivated;
+    public static event Action<int> OnEndObjectsActivated;
+
     [System.Serializable]
     public class PageTransitionConfig
     {
@@ -37,13 +42,14 @@ public class TransitionLayerManager : MonoBehaviour
         [Tooltip("GameObjects to enable when altitude reaches end transition limit.")]
         public GameObject[] endTargetGameObjects;
 
+        [Header("Inspector UI Triggers")]
+        public UnityEvent onStartLimitReached;
+        public UnityEvent onEndLimitReached;
+
         [Header("Unlock Rules")]
         [Tooltip("If true, automatically unlocks navigation on PageNavigationController once this page's caution threshold is met.")]
         public bool autoUnlockNavigation = true;
 
-        /// <summary>
-        /// True if altitude increases through this step (e.g. 3500 -> 4500), False if descending (e.g. 5000 -> 4000).
-        /// </summary>
         public bool IsAscending => endTransitionLayerLimit >= startTransitionLayerLimit;
 
         public void ValidateSteps()
@@ -80,7 +86,6 @@ public class TransitionLayerManager : MonoBehaviour
     [Header("Runtime State")]
     [SerializeField] private float currentTransitionLevel = 0f;
 
-    // Internal State
     private readonly HashSet<int> cautionTriggeredPages = new();
     private readonly HashSet<int> completedPages = new();
     private readonly HashSet<int> startActivatedPages = new();
@@ -151,7 +156,6 @@ public class TransitionLayerManager : MonoBehaviour
 
     private void HandlePageChanged(int newPageIndex)
     {
-        // Deactivate targets from the page being left before changing activeConfig
         if (currentLoadedPageIndex != -1 && currentLoadedPageIndex != newPageIndex)
         {
             DeactivatePageObjects(currentLoadedPageIndex);
@@ -167,6 +171,12 @@ public class TransitionLayerManager : MonoBehaviour
 
         if (activeConfig != null)
         {
+            // Reset cached activation states for re-visited pages
+            startActivatedPages.Remove(pageIndex);
+            endActivatedPages.Remove(pageIndex);
+            cautionTriggeredPages.Remove(pageIndex);
+            completedPages.Remove(pageIndex);
+
             activeConfig.UpdateUI();
         }
     }
@@ -176,7 +186,6 @@ public class TransitionLayerManager : MonoBehaviour
         PageTransitionConfig config = GetConfigForPage(pageIndex);
         if (config == null) return;
 
-        // Turn off start target objects
         if (config.startTargetGameObjects != null)
         {
             foreach (GameObject obj in config.startTargetGameObjects)
@@ -184,12 +193,10 @@ public class TransitionLayerManager : MonoBehaviour
                 if (obj != null && obj.activeSelf)
                 {
                     obj.SetActive(false);
-                    Debug.Log($"[TransitionLayerManager] Deactivated start object: {obj.name} from passed Page {pageIndex}");
                 }
             }
         }
 
-        // Turn off end target objects
         if (config.endTargetGameObjects != null)
         {
             foreach (GameObject obj in config.endTargetGameObjects)
@@ -197,7 +204,6 @@ public class TransitionLayerManager : MonoBehaviour
                 if (obj != null && obj.activeSelf)
                 {
                     obj.SetActive(false);
-                    Debug.Log($"[TransitionLayerManager] Deactivated end object: {obj.name} from passed Page {pageIndex}");
                 }
             }
         }
@@ -207,29 +213,30 @@ public class TransitionLayerManager : MonoBehaviour
     {
         if (startActivatedPages.Contains(config.pageIndex)) return;
 
-        // Check direction: Ascending (>=) vs Descending (<=)
+        // Force activation if starting altitude is already past boundary on page load
         bool limitReached = config.IsAscending 
             ? currentTransitionLevel >= config.startTransitionLayerLimit 
             : currentTransitionLevel <= config.startTransitionLayerLimit;
 
         if (limitReached)
         {
-            if (!config.bypassObjectActivation)
-            {
-                if (config.startTargetGameObjects != null)
-                {
-                    foreach (GameObject obj in config.startTargetGameObjects)
-                    {
-                        if (obj != null)
-                        {
-                            obj.SetActive(true);
-                            Debug.Log($"[TransitionLayerManager] Activated start object: {obj.name} on Page {config.pageIndex}");
-                        }
-                    }
-                }
-            }
-            startActivatedPages.Add(config.pageIndex);
+            TriggerStartActivation(config);
         }
+    }
+
+    public void TriggerStartActivation(PageTransitionConfig config)
+    {
+        if (!config.bypassObjectActivation && config.startTargetGameObjects != null)
+        {
+            foreach (GameObject obj in config.startTargetGameObjects)
+            {
+                if (obj != null) obj.SetActive(true);
+            }
+        }
+
+        startActivatedPages.Add(config.pageIndex);
+        config.onStartLimitReached?.Invoke();
+        OnStartObjectsActivated?.Invoke(config.pageIndex);
     }
 
     private void CheckCautionLimit(PageTransitionConfig config)
@@ -242,12 +249,10 @@ public class TransitionLayerManager : MonoBehaviour
 
         if (hasPassedCaution && !isTriggered)
         {
-            Debug.LogWarning($"⚠️ CAUTION: Altitude has crossed caution limit! Page: {config.pageIndex} | Current: {currentTransitionLevel:F0} ft | Limit: {config.cautionLimit:F0} ft");
             cautionTriggeredPages.Add(config.pageIndex);
         }
         else if (!hasPassedCaution && isTriggered)
         {
-            Debug.Log($"[TransitionLayerManager] Altitude returned inside normal limit on Page {config.pageIndex}. Resetting caution state.");
             cautionTriggeredPages.Remove(config.pageIndex);
         }
     }
@@ -256,29 +261,29 @@ public class TransitionLayerManager : MonoBehaviour
     {
         if (endActivatedPages.Contains(config.pageIndex)) return;
 
-        // Check direction: Ascending (>=) vs Descending (<=)
         bool limitReached = config.IsAscending
             ? currentTransitionLevel >= config.endTransitionLayerLimit
             : currentTransitionLevel <= config.endTransitionLayerLimit;
 
         if (limitReached)
         {
-            if (!config.bypassObjectActivation)
-            {
-                if (config.endTargetGameObjects != null)
-                {
-                    foreach (GameObject obj in config.endTargetGameObjects)
-                    {
-                        if (obj != null)
-                        {
-                            obj.SetActive(true);
-                            Debug.Log($"[TransitionLayerManager] Activated end object: {obj.name} on Page {config.pageIndex}");
-                        }
-                    }
-                }
-            }
-            endActivatedPages.Add(config.pageIndex);
+            TriggerEndActivation(config);
         }
+    }
+
+    public void TriggerEndActivation(PageTransitionConfig config)
+    {
+        if (!config.bypassObjectActivation && config.endTargetGameObjects != null)
+        {
+            foreach (GameObject obj in config.endTargetGameObjects)
+            {
+                if (obj != null) obj.SetActive(true);
+            }
+        }
+
+        endActivatedPages.Add(config.pageIndex);
+        config.onEndLimitReached?.Invoke();
+        OnEndObjectsActivated?.Invoke(config.pageIndex);
     }
 
     private void EvaluatePageCompletion(PageTransitionConfig config)
@@ -292,7 +297,6 @@ public class TransitionLayerManager : MonoBehaviour
         if (isMet)
         {
             completedPages.Add(config.pageIndex);
-            Debug.Log($"[TransitionLayerManager] Page {config.pageIndex} transition condition met at {currentTransitionLevel:F0} ft. Unlocking navigation.");
 
             if (config.autoUnlockNavigation)
             {
@@ -312,7 +316,6 @@ public class TransitionLayerManager : MonoBehaviour
         float range = activeConfig.endTransitionLayerLimit - activeConfig.startTransitionLayerLimit;
         if (Mathf.Approximately(range, 0f)) return 0f;
 
-        // Progress works bidirectional (0.0 at start limit -> 1.0 at end limit)
         return Mathf.Clamp01((currentTransitionLevel - activeConfig.startTransitionLayerLimit) / range);
     }
 
@@ -322,7 +325,6 @@ public class TransitionLayerManager : MonoBehaviour
         if (config != null)
         {
             config.bypassObjectActivation = true;
-            Debug.Log($"[TransitionLayerManager] Enabled bypassObjectActivation for Page {pageIndex}");
         }
     }
 }
