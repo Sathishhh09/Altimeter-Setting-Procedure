@@ -136730,6 +136730,7 @@ MonoBehaviour:
     correctAnswer: 0
     minCorrectRange: 0
     maxCorrectRange: 0
+    exceptValue: 0
     isAutoFillField: 0
     autoFillDelay: 0
     onPageCorrectAnswer:
@@ -136748,6 +136749,7 @@ MonoBehaviour:
     correctAnswer: 1013
     minCorrectRange: 0
     maxCorrectRange: 0
+    exceptValue: 0
     isAutoFillField: 0
     autoFillDelay: 0
     onPageCorrectAnswer:
@@ -136778,6 +136780,7 @@ MonoBehaviour:
     correctAnswer: 1013
     minCorrectRange: 0
     maxCorrectRange: 0
+    exceptValue: 0
     isAutoFillField: 0
     autoFillDelay: 0
     onPageCorrectAnswer:
@@ -136796,6 +136799,7 @@ MonoBehaviour:
     correctAnswer: 1013
     minCorrectRange: 1001
     maxCorrectRange: 1025
+    exceptValue: 1013
     isAutoFillField: 0
     autoFillDelay: 0
     onPageCorrectAnswer:
@@ -136814,6 +136818,7 @@ MonoBehaviour:
     correctAnswer: 1013
     minCorrectRange: 0
     maxCorrectRange: 0
+    exceptValue: 0
     isAutoFillField: 0
     autoFillDelay: 0
     onPageCorrectAnswer:
@@ -218609,7 +218614,7 @@ MonoBehaviour:
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
-          m_StringArgument: hello
+          m_StringArgument: Experiment
           m_BoolArgument: 0
         m_CallState: 2
 --- !u!1 &1646924479
@@ -253630,7 +253635,7 @@ MonoBehaviour:
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
-          m_StringArgument: hello
+          m_StringArgument: Experiment
           m_BoolArgument: 0
         m_CallState: 2
 --- !u!114 &1925831475

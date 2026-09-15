@@ -19,7 +19,7 @@ public class QNHManager : MonoBehaviour
         PresetGenerated,
         [Tooltip("Uses the 'correctAnswer' field as the correct answer.")]
         StaticAnswer,
-        [Tooltip("Validates if the entered value falls between a user-defined minimum and maximum range.")]
+        [Tooltip("Validates if the entered value falls between a user-defined minimum and maximum range, excluding an optional specific value.")]
         RangeAnswer
     }
 
@@ -60,6 +60,9 @@ public class QNHManager : MonoBehaviour
 
         [Tooltip("Maximum threshold for acceptable input when Answer Mode is set to RangeAnswer.")]
         public float maxCorrectRange;
+
+        [Tooltip("Value within the range that should be marked INCORRECT if entered. Set to 0 to disable if unused.")]
+        public float exceptValue;
 
         [Header("Auto-Fill Settings")]
         [Tooltip("If TRUE: field will automatically validate without waiting for user input.")]
@@ -188,8 +191,14 @@ public class QNHManager : MonoBehaviour
                     return CurrentConfig.correctAnswer;
 
                 case QNHAnswerMode.RangeAnswer:
-                    // Return average of range for auto-fill or text preview purposes
-                    return (CurrentConfig.minCorrectRange + CurrentConfig.maxCorrectRange) / 2f;
+                    float targetVal = (CurrentConfig.minCorrectRange + CurrentConfig.maxCorrectRange) / 2f;
+                    
+                    // If the calculated auto-fill value hits the excluded value, offset it to maintain validity
+                    if (CurrentConfig.exceptValue != 0f && Mathf.Abs(targetVal - CurrentConfig.exceptValue) <= matchTolerance)
+                    {
+                        targetVal += 1f;
+                    }
+                    return targetVal;
 
                 default:
                     return CurrentConfig.correctAnswer;
@@ -330,7 +339,7 @@ public class QNHManager : MonoBehaviour
         float activeTargetValue = config.answerMode switch
         {
             QNHAnswerMode.StaticAnswer => config.correctAnswer,
-            QNHAnswerMode.RangeAnswer => config.minCorrectRange, // Displays lower threshold on UI text element by default
+            QNHAnswerMode.RangeAnswer => config.minCorrectRange,
             _ => config.generatedTargetQNH
         };
 
@@ -338,7 +347,14 @@ public class QNHManager : MonoBehaviour
         {
             if (config.answerMode == QNHAnswerMode.RangeAnswer)
             {
-                config.qnhDisplayText.text = $"{config.minCorrectRange:F0}-{config.maxCorrectRange:F0}";
+                if (config.exceptValue != 0f)
+                {
+                    config.qnhDisplayText.text = $"{config.minCorrectRange:F0}-{config.maxCorrectRange:F0} (Excl: {config.exceptValue:F0})";
+                }
+                else
+                {
+                    config.qnhDisplayText.text = $"{config.minCorrectRange:F0}-{config.maxCorrectRange:F0}";
+                }
             }
             else
             {
@@ -480,8 +496,13 @@ public class QNHManager : MonoBehaviour
 
         if (current.answerMode == QNHAnswerMode.RangeAnswer)
         {
-            isCorrect = current.currentEnteredValue >= current.minCorrectRange && 
-                        current.currentEnteredValue <= current.maxCorrectRange;
+            bool isInRange = current.currentEnteredValue >= current.minCorrectRange && 
+                             current.currentEnteredValue <= current.maxCorrectRange;
+
+            bool isExcluded = current.exceptValue != 0f && 
+                             Mathf.Abs(current.currentEnteredValue - current.exceptValue) <= matchTolerance;
+
+            isCorrect = isInRange && !isExcluded;
         }
         else
         {
@@ -586,7 +607,7 @@ public class QNHManager : MonoBehaviour
         float targetValue = targetField.answerMode switch
         {
             QNHAnswerMode.StaticAnswer => targetField.correctAnswer,
-            QNHAnswerMode.RangeAnswer => (targetField.minCorrectRange + targetField.maxCorrectRange) / 2f,
+            QNHAnswerMode.RangeAnswer => ActiveAnswer,
             _ => GetTargetQNHForPage(targetField.pageIndex)
         };
 
