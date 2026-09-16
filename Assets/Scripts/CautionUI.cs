@@ -1,38 +1,58 @@
 using UnityEngine;
-using UnityEngine.UI;
 
 public class CautionUI : MonoBehaviour
 {
-    [Header("Panel Settings")]
-    [SerializeField] private Image panelImage;
+    [Header("Target Panels")]
+    [SerializeField] private GameObject[] panelObjects;
 
-    [Header("Alpha Pulse Settings")]
-    [Range(0f, 1f)] public float minAlpha = 0.2f;
-    [Range(0f, 1f)] public float maxAlpha = 0.8f;
-    public float pulseSpeed = 2f;
+    [Header("Blink Duration Settings")]
+    [Tooltip("Time in seconds the panels remain active/visible.")]
+    public float activeDuration = 1.0f;
+
+    [Tooltip("Time in seconds the panels remain inactive/hidden.")]
+    public float inactiveDuration = 0.5f;
+
+    private float timer;
+    private bool isPanelActive = true;
 
     void Start()
     {
-        // Automatically grab the Image component attached to this GameObject if not assigned in Inspector
-        if (panelImage == null)
+        // Automatically target this GameObject if none are assigned in the Inspector
+        if (panelObjects == null || panelObjects.Length == 0)
         {
-            panelImage = GetComponent<Image>();
+            panelObjects = new GameObject[] { gameObject };
         }
+
+        // Initialize timer to start counting down the active state
+        timer = activeDuration;
+        SetPanelsActive(isPanelActive);
     }
 
     void Update()
     {
-        if (panelImage == null) return;
+        if (panelObjects == null || panelObjects.Length == 0) return;
 
-        // Calculate a value that smoothly goes back and forth between 0 and 1
-        float t = Mathf.PingPong(Time.time * pulseSpeed, 1f);
+        timer -= Time.deltaTime;
 
-        // Interpolate the alpha value between minAlpha and maxAlpha
-        float currentAlpha = Mathf.Lerp(minAlpha, maxAlpha, t);
+        // Toggle state when the timer runs out
+        if (timer <= 0f)
+        {
+            isPanelActive = !isPanelActive;
+            SetPanelsActive(isPanelActive);
 
-        // Apply the updated color back to the panel
-        Color color = panelImage.color;
-        color.a = currentAlpha;
-        panelImage.color = color;
+            // Reset timer based on the new state
+            timer = isPanelActive ? activeDuration : inactiveDuration;
+        }
+    }
+
+    private void SetPanelsActive(bool state)
+    {
+        for (int i = 0; i < panelObjects.Length; i++)
+        {
+            if (panelObjects[i] != null)
+            {
+                panelObjects[i].SetActive(state);
+            }
+        }
     }
 }
