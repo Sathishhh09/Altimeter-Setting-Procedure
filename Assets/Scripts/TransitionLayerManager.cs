@@ -134,24 +134,35 @@ public class TransitionLayerManager : MonoBehaviour
         UpdateActiveConfig(PageNavigationController.CurrentIndex);
     }
 
-    private void Update()
+private void Update()
+{
+    if (altimeterController != null)
     {
-        if (altimeterController != null)
-        {
-            currentTransitionLevel = altimeterController.altitude;
-        }
-
-        UpdateCurrentTransitionLevelUI();
-
-        if (activeConfig != null)
-        {
-            activeConfig.UpdateUI();
-            CheckStartTransitionLimit(activeConfig);
-            CheckCautionLimit(activeConfig);
-            CheckEndTransitionLimit(activeConfig);
-            EvaluatePageCompletion(activeConfig);
-        }
+        currentTransitionLevel = altimeterController.altitude;
     }
+
+    UpdateCurrentTransitionLevelUI();
+
+    if (activeConfig != null)
+    {
+        activeConfig.UpdateUI();
+        CheckStartTransitionLimit(activeConfig);
+        CheckCautionLimit(activeConfig);
+        
+        // REMOVED: CheckEndTransitionLimit(activeConfig); 
+        // End limit will now only be triggered manually when QNH is correct.
+        
+        EvaluatePageCompletion(activeConfig);
+    }
+}
+
+public void TriggerCurrentEndActivation()
+{
+    if (activeConfig != null)
+    {
+        TriggerEndActivation(activeConfig);
+    }
+}
 
     private void UpdateCurrentTransitionLevelUI()
     {

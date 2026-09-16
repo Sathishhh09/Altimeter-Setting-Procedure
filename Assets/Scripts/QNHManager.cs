@@ -535,51 +535,58 @@ public class QNHManager : MonoBehaviour
         StartCoroutine(ValidateAndAdvanceRoutine());
     }
 
-    private IEnumerator ValidateAndAdvanceRoutine()
+private IEnumerator ValidateAndAdvanceRoutine()
+{
+    isValidating = true;
+    HideFeedback();
+
+    PageQNHConfig current = CurrentConfig;
+
+    if (ActiveImage != null)
     {
-        isValidating = true;
-        HideFeedback();
-
-        PageQNHConfig current = CurrentConfig;
-
-        if (ActiveImage != null)
-        {
-            ActiveImage.sprite = correctSprite;
-            ActiveImage.gameObject.SetActive(true);
-        }
-
-        if (audioSource != null && correctSound != null)
-        {
-            audioSource.PlayOneShot(correctSound);
-        }
-
-        if (current != null)
-        {
-            current.solved = true;
-
-            if (current.inputField != null)
-            {
-                current.inputField.interactable = false;
-            }
-
-            EnableFieldObjects(current, true);
-
-            current.onPageCorrectAnswer?.Invoke();
-        }
-
-        onQNHMatched?.Invoke();
-        wrongAttempts = 0;
-
-        if (autoFillButton != null)
-        {
-            autoFillButton.gameObject.SetActive(false);
-        }
-
-        yield return null;
-        isValidating = false;
-
-        CheckNextFieldOrAutoFill();
+        ActiveImage.sprite = correctSprite;
+        ActiveImage.gameObject.SetActive(true);
     }
+
+    if (audioSource != null && correctSound != null)
+    {
+        audioSource.PlayOneShot(correctSound);
+    }
+
+    if (current != null)
+    {
+        current.solved = true;
+
+        if (current.inputField != null)
+        {
+            current.inputField.interactable = false;
+        }
+
+        EnableFieldObjects(current, true);
+
+        current.onPageCorrectAnswer?.Invoke();
+    }
+
+    // Trigger the End Limit directly on the TransitionLayerManager when the answer is correct
+    TransitionLayerManager transitionManager = FindFirstObjectByType<TransitionLayerManager>();
+    if (transitionManager != null)
+    {
+        transitionManager.TriggerCurrentEndActivation();
+    }
+
+    onQNHMatched?.Invoke();
+    wrongAttempts = 0;
+
+    if (autoFillButton != null)
+    {
+        autoFillButton.gameObject.SetActive(false);
+    }
+
+    yield return null;
+    isValidating = false;
+
+    CheckNextFieldOrAutoFill();
+}
 
     private void CheckNextFieldOrAutoFill()
     {

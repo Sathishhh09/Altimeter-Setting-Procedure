@@ -1,11 +1,14 @@
-// A320PFD.cs
+// AltimeterController.cs
 //
 // Generates a complete A320-style Primary Flight Display entirely at runtime - no manually
 // created UI objects required. Attach to any empty GameObject and press Play.
 
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Events;
+using System;
 using System.Collections.Generic;
+using TMPro;
 
 [DisallowMultipleComponent]
 public class A320PFD : MonoBehaviour
@@ -40,6 +43,106 @@ public class A320PFD : MonoBehaviour
 
         [Tooltip("Altimeter speed/rate value for this specific page (always positive).")]
         public float altimeterSpeed;
+    }
+
+    // ==================================================
+    // Transition Layer Management Structures
+    // ==================================================
+    public static event Action<int> OnStartObjectsActivated;
+    public static event Action<int> OnCautionObjectsActivated;
+    public static event Action<int> OnEndObjectsActivated;
+
+    [System.Serializable]
+    public class PageTransitionConfig
+    {
+        [Tooltip("The page index where these transition settings apply.")]
+        public int pageIndex = 1;
+
+        [Header("Transition Boundaries (Altitude in Feet)")]
+        [Tooltip("Starting transition limit.")]
+        [Range(3500f, 7000f)]
+        public float startTransitionLayerLimit = 3500f;
+
+        [Tooltip("Caution threshold limit.")]
+        [Range(3500f, 7000f)]
+        public float cautionLimit = 4000f;
+
+        [Tooltip("Ending transition limit.")]
+        [Range(3500f, 7000f)]
+        public float endTransitionLayerLimit = 4500f;
+
+        [Header("UI References")]
+        [Tooltip("Text component displaying current active altitude.")]
+        public TMP_Text currentAltitudeText;
+
+        [Tooltip("Text component used to display the start transition limit value.")]
+        public TMP_Text startTransitionText;
+
+        [Tooltip("Text component used to display the caution limit value.")]
+        public TMP_Text cautionTransitionText;
+
+        [Tooltip("Text component used to display the end transition limit value.")]
+        public TMP_Text endTransitionText;
+
+        [Header("Object Activation")]
+        [Tooltip("If checked (true), starting, caution, and ending GameObjects will NOT be enabled automatically.")]
+        public bool bypassObjectActivation = false;
+
+        [Tooltip("GameObjects to enable when altitude reaches start transition limit.")]
+        public GameObject[] startTargetGameObjects;
+
+        [Tooltip("GameObjects to enable when altitude reaches caution limit.")]
+        public GameObject[] cautionTargetGameObjects;
+
+        [Tooltip("GameObjects to enable when altitude reaches end transition limit.")]
+        public GameObject[] endTargetGameObjects;
+
+        [Header("Inspector UI Triggers")]
+        public UnityEvent onStartLimitReached;
+        public UnityEvent onCautionLimitReached;
+        public UnityEvent onEndLimitReached;
+
+        [Header("Unlock Rules")]
+        [Tooltip("If true, automatically unlocks navigation on PageNavigationController once this page's caution threshold is met.")]
+        public bool autoUnlockNavigation = true;
+
+        public bool IsAscending => endTransitionLayerLimit >= startTransitionLayerLimit;
+
+        public void ValidateSteps()
+        {
+            startTransitionLayerLimit = SnapToStep(startTransitionLayerLimit, 500f, 3500f, 7000f);
+            cautionLimit = SnapToStep(cautionLimit, 500f, 3500f, 7000f);
+            endTransitionLayerLimit = SnapToStep(endTransitionLayerLimit, 500f, 3500f, 7000f);
+        }
+
+        private float SnapToStep(float value, float step, float min, float max)
+        {
+            float snapped = Mathf.Round(value / step) * step;
+            return Mathf.Clamp(snapped, min, max);
+        }
+
+        public void UpdateUI(float currentAltitude)
+        {
+            if (currentAltitudeText != null)
+            {
+                currentAltitudeText.text = $"{currentAltitude:F0} FT";
+            }
+
+            if (startTransitionText != null)
+            {
+                startTransitionText.text = $"{startTransitionLayerLimit:F0} FT";
+            }
+
+            if (cautionTransitionText != null)
+            {
+                cautionTransitionText.text = $"{cautionLimit:F0} FT";
+            }
+
+            if (endTransitionText != null)
+            {
+                endTransitionText.text = $"{endTransitionLayerLimit:F0} FT";
+            }
+        }
     }
 
     // ==================================================
@@ -95,6 +198,15 @@ public class A320PFD : MonoBehaviour
 
     [Tooltip("Climb/descent rate (ft/min) that produces the full Max Pitch Degrees.")]
     [Min(1f)] public float pitchRateReference = 1000f;
+
+    // ==================================================
+    // Inspector - Transition Layer Settings
+    // ==================================================
+    [Header("Transition Layer UI References")]
+    [SerializeField] private TMP_Text currentTransitionLevelText;
+
+    [Header("Transition Layer Page Configurations")]
+    [SerializeField] private List<PageTransitionConfig> transitionPageConfigs = new List<PageTransitionConfig>();
 
     // ==================================================
     // Inspector - ILS
@@ -203,6 +315,32 @@ public class A320PFD : MonoBehaviour
     private float? currentMaxAltitude = null;
     private static Font cachedFont;
 
+    // Transition Runtime States
+    private readonly HashSet<int> cautionTriggeredPages = new HashSet<int>();
+    private readonly HashSet<int> completedPages = new HashSet<int>();
+    private readonly HashSet<int> startActivatedPages = new HashSet<int>();
+    private readonly HashSet<int> cautionActivatedPages = new HashSet<int>();
+    private readonly HashSet<int> endActivatedPages = new HashSet<int>();
+    private PageTransitionConfig activeTransitionConfig;
+    private int currentLoadedPageIndex = -1;
+
+    // Altimeter Start/Stop Control Flag
+    private bool isAltimeterActive = false;
+
+    public float CurrentTransitionLevel => altitude;
+    public PageTransitionConfig ActiveTransitionConfig => activeTransitionConfig;
+
+    private void OnValidate()
+    {
+        if (transitionPageConfigs != null)
+        {
+            foreach (var config in transitionPageConfigs)
+            {
+                config.ValidateSteps();
+            }
+        }
+    }
+
     // ==================================================
     // Lifecycle
     // ==================================================
@@ -227,18 +365,27 @@ public class A320PFD : MonoBehaviour
 
     private void Start()
     {
-        // Sync the active page altitude & speed setting when starting up
-        SetAltimeterSpeedForPage(PageNavigationController.CurrentIndex);
+        // Sync active page state when starting up
+        int initialPage = PageNavigationController.CurrentIndex;
+        SetAltimeterSpeedForPage(initialPage);
+        UpdateActiveTransitionConfig(initialPage);
     }
 
     private void OnDisable()
     {
-        PageNavigationController.OnPageChanged -= HandlePageChanged;
+        //PageNavigationController.OnPageChanged -= HandlePageChanged;
     }
 
     private void HandlePageChanged(int pageIndex)
     {
         SetAltimeterSpeedForPage(pageIndex);
+        
+        if (currentLoadedPageIndex != -1 && currentLoadedPageIndex != pageIndex)
+        {
+            DeactivatePageObjects(currentLoadedPageIndex);
+        }
+
+        UpdateActiveTransitionConfig(pageIndex);
     }
 
     private void SetAltimeterSpeedForPage(int targetPageIndex)
@@ -252,7 +399,6 @@ public class A320PFD : MonoBehaviour
         {
             if (pageAltimeterSpeeds[i].pageIndex == targetPageIndex)
             {
-                // Update altitude if bool flag is true
                 if (pageAltimeterSpeeds[i].usePageAltitude)
                 {
                     altitude = pageAltimeterSpeeds[i].pageAltitude;
@@ -268,18 +414,259 @@ public class A320PFD : MonoBehaviour
 
     private void Update()
     {
-        if (pfdRoot == null)
-            return;
+        if (pfdRoot != null)
+        {
+            UpdateAltitudeFromSpeed();
+            UpdateRoll();
+            UpdateHeadingFromRoll();
+            UpdateSpeedFromRoll();
+            UpdateSpeedTape();
+            UpdateAltitudeTape();
+            UpdatePitchFromAltitude();
+            UpdateHeadingTape();
+            UpdateILSAndFD();
+        }
 
-        UpdateAltitudeFromSpeed();
-        UpdateRoll();
-        UpdateHeadingFromRoll();
-        UpdateSpeedFromRoll();
-        UpdateSpeedTape();
-        UpdateAltitudeTape();
-        UpdatePitchFromAltitude();
-        UpdateHeadingTape();
-        UpdateILSAndFD();
+        // Process Transition Layer Operations
+        UpdateCurrentTransitionLevelUI();
+
+        if (activeTransitionConfig != null)
+        {
+            activeTransitionConfig.UpdateUI(altitude);
+            CheckStartTransitionLimit(activeTransitionConfig);
+            CheckCautionLimit(activeTransitionConfig);
+            CheckEndTransitionLimit(activeTransitionConfig);
+            EvaluatePageCompletion(activeTransitionConfig);
+        }
+    }
+
+    // ==================================================
+    // Altimeter Event Triggers
+    // ==================================================
+    public void altimeterstart()
+    {
+        isAltimeterActive = true;
+        Debug.Log("[A320PFD] Altimeter started changing altitude.");
+    }
+
+    public void altimeterstop()
+    {
+        isAltimeterActive = false;
+        Debug.Log("[A320PFD] Altimeter stopped changing altitude.");
+    }
+
+    // ==================================================
+    // Transition Layer Logic & Activation Triggers
+    // ==================================================
+    public void TriggerCurrentStartActivation()
+    {
+        if (activeTransitionConfig != null)
+        {
+            TriggerStartActivation(activeTransitionConfig);
+        }
+    }
+
+    public void TriggerCurrentCautionActivation()
+    {
+        if (activeTransitionConfig != null)
+        {
+            TriggerCautionActivation(activeTransitionConfig);
+        }
+    }
+
+    public void TriggerCurrentEndActivation()
+    {
+        if (activeTransitionConfig != null)
+        {
+            TriggerEndActivation(activeTransitionConfig);
+        }
+    }
+
+    private void UpdateCurrentTransitionLevelUI()
+    {
+        if (currentTransitionLevelText != null)
+        {
+            currentTransitionLevelText.text = $"{altitude:F0} FT";
+        }
+    }
+
+    private void UpdateActiveTransitionConfig(int pageIndex)
+    {
+        currentLoadedPageIndex = pageIndex;
+        activeTransitionConfig = transitionPageConfigs.Find(config => config.pageIndex == pageIndex);
+
+        if (activeTransitionConfig != null)
+        {
+            startActivatedPages.Remove(pageIndex);
+            cautionActivatedPages.Remove(pageIndex);
+            endActivatedPages.Remove(pageIndex);
+            cautionTriggeredPages.Remove(pageIndex);
+            completedPages.Remove(pageIndex);
+
+            activeTransitionConfig.UpdateUI(altitude);
+        }
+    }
+
+    private void DeactivatePageObjects(int pageIndex)
+    {
+        PageTransitionConfig config = GetTransitionConfigForPage(pageIndex);
+        if (config == null) return;
+
+        DeactivateObjects(config.startTargetGameObjects);
+        DeactivateObjects(config.cautionTargetGameObjects);
+        DeactivateObjects(config.endTargetGameObjects);
+    }
+
+    private void DeactivateObjects(GameObject[] targetObjects)
+    {
+        if (targetObjects == null) return;
+
+        foreach (GameObject obj in targetObjects)
+        {
+            if (obj != null && obj.activeSelf)
+            {
+                obj.SetActive(false);
+            }
+        }
+    }
+
+    private void CheckStartTransitionLimit(PageTransitionConfig config)
+    {
+        if (startActivatedPages.Contains(config.pageIndex)) return;
+
+        bool limitReached = config.IsAscending 
+            ? altitude >= config.startTransitionLayerLimit 
+            : altitude <= config.startTransitionLayerLimit;
+
+        if (limitReached)
+        {
+            TriggerStartActivation(config);
+        }
+    }
+
+    public void TriggerStartActivation(PageTransitionConfig config)
+    {
+        if (!config.bypassObjectActivation && config.startTargetGameObjects != null)
+        {
+            foreach (GameObject obj in config.startTargetGameObjects)
+            {
+                if (obj != null) obj.SetActive(true);
+            }
+        }
+
+        startActivatedPages.Add(config.pageIndex);
+        config.onStartLimitReached?.Invoke();
+        OnStartObjectsActivated?.Invoke(config.pageIndex);
+    }
+
+    private void CheckCautionLimit(PageTransitionConfig config)
+    {
+        bool hasPassedCaution = config.IsAscending
+            ? altitude >= config.cautionLimit
+            : altitude <= config.cautionLimit;
+
+        if (hasPassedCaution)
+        {
+            if (!cautionActivatedPages.Contains(config.pageIndex))
+            {
+                TriggerCautionActivation(config);
+            }
+
+            if (!cautionTriggeredPages.Contains(config.pageIndex))
+            {
+                cautionTriggeredPages.Add(config.pageIndex);
+            }
+        }
+        else if (cautionTriggeredPages.Contains(config.pageIndex))
+        {
+            cautionTriggeredPages.Remove(config.pageIndex);
+        }
+    }
+
+    public void TriggerCautionActivation(PageTransitionConfig config)
+    {
+        if (!config.bypassObjectActivation && config.cautionTargetGameObjects != null)
+        {
+            foreach (GameObject obj in config.cautionTargetGameObjects)
+            {
+                if (obj != null) obj.SetActive(true);
+            }
+        }
+
+        cautionActivatedPages.Add(config.pageIndex);
+        config.onCautionLimitReached?.Invoke();
+        OnCautionObjectsActivated?.Invoke(config.pageIndex);
+    }
+
+    private void CheckEndTransitionLimit(PageTransitionConfig config)
+    {
+        if (endActivatedPages.Contains(config.pageIndex)) return;
+
+        bool limitReached = config.IsAscending
+            ? altitude >= config.endTransitionLayerLimit
+            : altitude <= config.endTransitionLayerLimit;
+
+        if (limitReached)
+        {
+            TriggerEndActivation(config);
+        }
+    }
+
+    public void TriggerEndActivation(PageTransitionConfig config)
+    {
+        if (!config.bypassObjectActivation && config.endTargetGameObjects != null)
+        {
+            foreach (GameObject obj in config.endTargetGameObjects)
+            {
+                if (obj != null) obj.SetActive(true);
+            }
+        }
+
+        endActivatedPages.Add(config.pageIndex);
+        config.onEndLimitReached?.Invoke();
+        OnEndObjectsActivated?.Invoke(config.pageIndex);
+    }
+
+    private void EvaluatePageCompletion(PageTransitionConfig config)
+    {
+        if (completedPages.Contains(config.pageIndex)) return;
+
+        bool isMet = config.IsAscending
+            ? altitude >= config.endTransitionLayerLimit
+            : altitude <= config.endTransitionLayerLimit;
+
+        if (isMet)
+        {
+            completedPages.Add(config.pageIndex);
+
+            if (config.autoUnlockNavigation)
+            {
+                PageNavigationController.RequestNavigationUnlock();
+            }
+        }
+    }
+
+    public PageTransitionConfig GetTransitionConfigForPage(int pageIndex)
+    {
+        return transitionPageConfigs.Find(config => config.pageIndex == pageIndex);
+    }
+
+    public float GetNormalizedTransitionProgress()
+    {
+        if (activeTransitionConfig == null) return 0f;
+        float range = activeTransitionConfig.endTransitionLayerLimit - activeTransitionConfig.startTransitionLayerLimit;
+        if (Mathf.Approximately(range, 0f)) return 0f;
+
+        return Mathf.Clamp01((altitude - activeTransitionConfig.startTransitionLayerLimit) / range);
+    }
+
+    public void EnableBypassForPage(int pageIndex)
+    {
+        PageTransitionConfig config = GetTransitionConfigForPage(pageIndex);
+        if (config != null)
+        {
+            config.bypassObjectActivation = true;
+        }
     }
 
 #if UNITY_EDITOR
@@ -689,10 +1076,13 @@ public class A320PFD : MonoBehaviour
     }
 
     // ==================================================
-    // Update
+    // Internal Updates
     // ==================================================
     private void UpdateAltitudeFromSpeed()
     {
+        // Only modify altitude if the altimeter has been explicitly started by an event trigger
+        if (!isAltimeterActive) return;
+
         switch (altimeterDirection)
         {
             case AltitudeChangeDirection.Increase:
@@ -706,7 +1096,6 @@ public class A320PFD : MonoBehaviour
                 altitude -= Mathf.Abs(altimeterSpeed) * Time.deltaTime;
                 break;
             case AltitudeChangeDirection.Maintain:
-                // No altitude change
                 break;
         }
     }
@@ -802,7 +1191,6 @@ public class A320PFD : MonoBehaviour
 
     private void UpdateAltitudeTape()
     {
-        // Directly target the 'altitude' variable, offset by roll reaction if enabled
         float rollOffset = altitudeReactsToRoll ? GetRollFactor() * altitudeRollDeviation : 0f;
         float altitudeTarget = Mathf.Max(0f, altitude + rollOffset);
         displayAltitude = Mathf.SmoothDamp(displayAltitude, altitudeTarget, ref altVelocity, smoothDuration);
@@ -914,7 +1302,7 @@ public class A320PFD : MonoBehaviour
     {
 #if UNITY_EDITOR
         if (!Application.isPlaying)
-            UnityEditor.Undo.RegisterCreatedObjectUndo(go, "Generate A320 PFD");
+            UnityEditor.Undo.RegisterCreatedObjectUndo(go, "Generate Altimeter Controller PFD");
 #endif
     }
 
@@ -1015,5 +1403,39 @@ public class A320PFD : MonoBehaviour
             cachedFont = Font.CreateDynamicFontFromOSFont("Arial", 14);
 
         return cachedFont;
+    }
+
+    public void pagealtimeterspeedstart(int pageIndex)
+    {
+        SetAltimeterSpeedForPage(pageIndex);
+        
+        bool pageFound = pageAltimeterSpeeds != null && pageAltimeterSpeeds.Exists(p => p.pageIndex == pageIndex);
+        if (!pageFound)
+        {
+            Debug.LogWarning($"[A320PFD] pagealtimeterspeedstart: No configuration found for Page {pageIndex} in Inspector!");
+        }
+        else
+        {
+            Debug.Log($"[A320PFD] Applied Altimeter Speed for Page {pageIndex}.");
+        }
+    }
+
+    public void transitionpageconfigstart(int pageIndex)
+    {
+        if (currentLoadedPageIndex != -1 && currentLoadedPageIndex != pageIndex)
+        {
+            DeactivatePageObjects(currentLoadedPageIndex);
+        }
+
+        UpdateActiveTransitionConfig(pageIndex);
+
+        if (activeTransitionConfig == null)
+        {
+            Debug.LogWarning($"[A320PFD] transitionpageconfigstart: No Transition Page Config found for Page {pageIndex} in Inspector!");
+        }
+        else
+        {
+            Debug.Log($"[A320PFD] Applied Transition Config for Page {pageIndex}.");
+        }
     }
 }
