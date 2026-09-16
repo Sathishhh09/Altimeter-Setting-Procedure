@@ -1,12 +1,13 @@
 // AltimeterController.cs
 //
 // Generates a complete A320-style Primary Flight Display entirely at runtime - no manually
-// created UI objects required. Attach to any empty GameObject and press Play.
+// created UI objects required. Integrated with QNH Management & Validation capabilities.
 
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 
@@ -14,7 +15,7 @@ using TMPro;
 public class A320PFD : MonoBehaviour
 {
     // ==================================================
-    // Custom Data Structure for Page Settings
+    // Custom Data Structures for Page Settings
     // ==================================================
     public enum AltitudeChangeDirection
     {
@@ -43,6 +44,80 @@ public class A320PFD : MonoBehaviour
 
         [Tooltip("Altimeter speed/rate value for this specific page (always positive).")]
         public float altimeterSpeed;
+    }
+
+    // ==================================================
+    // QNH Management Structures & Enums
+    // ==================================================
+    public enum QNHAnswerMode
+    {
+        [Tooltip("Generates a dynamic random QNH value based on min/max range.")]
+        DynamicRandom,
+        [Tooltip("Uses the pre-entered 'generatedTargetQNH' field directly as the correct answer.")]
+        PresetGenerated,
+        [Tooltip("Uses the 'correctAnswer' field as the correct answer.")]
+        StaticAnswer,
+        [Tooltip("Validates if the entered value falls between a user-defined minimum and maximum range, excluding an optional specific value.")]
+        RangeAnswer
+    }
+
+    [System.Serializable]
+    public class PageQNHConfig
+    {
+        [Header("Page Setup")]
+        [Tooltip("Page index where this configuration applies.")]
+        public int pageIndex;
+
+        [Header("Answer Selection Strategy")]
+        [Tooltip("Choose how the correct answer/target QNH for this page is determined.")]
+        public QNHAnswerMode answerMode = QNHAnswerMode.DynamicRandom;
+
+        [Header("Target Generation & Display")]
+        [Tooltip("TMP Text element to display the generated or selected target QNH for this page.")]
+        public TMP_Text qnhDisplayText;
+
+        [Tooltip("Target QNH value. Auto-generates if set to DynamicRandom and currently 0. Used as-is if set to PresetGenerated.")]
+        public float generatedTargetQNH;
+
+        [Header("Validation & Input References")]
+        public TMP_InputField inputField;
+        public TMP_Text enteredQNHText;
+        public Image feedbackImage;
+
+        [Header("Page Objects")]
+        [Tooltip("Objects to enable when this field is answered correctly on this page.")]
+        public GameObject[] objectsToEnable;
+
+        [Header("Static Answer Settings")]
+        [Tooltip("Static answer used when Answer Mode is set to StaticAnswer.")]
+        public float correctAnswer;
+
+        [Header("Range Answer Settings")]
+        [Tooltip("Minimum threshold for acceptable input when Answer Mode is set to RangeAnswer.")]
+        public float minCorrectRange;
+
+        [Tooltip("Maximum threshold for acceptable input when Answer Mode is set to RangeAnswer.")]
+        public float maxCorrectRange;
+
+        [Tooltip("Value within the range that should be marked INCORRECT if entered. Set to 0 to disable if unused.")]
+        public float exceptValue;
+
+        [Header("Auto-Fill Settings")]
+        [Tooltip("If TRUE: field will automatically validate without waiting for user input.")]
+        public bool isAutoFillField = false;
+
+        [Tooltip("Delay in seconds before auto-filling.")]
+        public float autoFillDelay = 0.5f;
+
+        [Header("Page Specific Events")]
+        [Tooltip("Fires specifically when this page's QNH answer is correctly solved or verified.")]
+        public UnityEvent onPageCorrectAnswer;
+
+        [HideInInspector]
+        public bool solved;
+
+        [HideInInspector]
+        public float currentEnteredValue;
     }
 
     // ==================================================
@@ -146,6 +221,39 @@ public class A320PFD : MonoBehaviour
     }
 
     // ==================================================
+    // Inspector - QNH Settings
+    // ==================================================
+    [Header("QNH Page Configurations (Sequential Order)")]
+    public List<PageQNHConfig> qnhPageConfigurations = new List<PageQNHConfig>();
+
+    [Header("QNH Randomization Settings")]
+    [SerializeField] private int minQNHRange = 1001;
+    [SerializeField] private int maxQNHRange = 1025;
+    [SerializeField] private float defaultTargetQNH = 1013f;
+
+    [Header("QNH Feedback & Audio")]
+    public TMP_Text qnhFeedbackText;
+    public AudioSource qnhAudioSource;
+    public AudioClip qnhCorrectSound;
+    public AudioClip qnhWrongSound;
+    public Sprite qnhCorrectSprite;
+    public Sprite qnhWrongSprite;
+
+    [Header("QNH Buttons & Validation")]
+    public Button qnhValidateButton;
+    public Button qnhAutoFillButton;
+    public int maxWrongQNHAttempts = 3;
+    public float qnhMatchTolerance = 0.01f;
+
+    [Header("QNH Global Events")]
+    public UnityEvent onQNHTargetReached;
+    public UnityEvent onQNHMatched;
+    public UnityEvent onQNHMismatch;
+    public UnityEvent<float> onEnteredQNHChanged;
+    public UnityEvent onQNHPageFieldsCompleted;
+    public UnityEvent onAllQNHAnswersVerified;
+
+    // ==================================================
     // Inspector - Roll Control
     // ==================================================
     [Header("Roll Control")]
@@ -157,46 +265,26 @@ public class A320PFD : MonoBehaviour
     // Inspector - Flight Data
     // ==================================================
     [Header("Flight Data")]
-    [Tooltip("Baseline/commanded airspeed. What the tape shows is this plus a bounded roll-reaction offset.")]
     public float speed = 140f;
-    [Tooltip("Baseline/commanded altitude. What the tape shows is this plus a bounded roll-reaction offset.")]
     public float altitude = 3500f;
     [Range(0f, 359.99f)] public float heading = 270f;
-
-    [Tooltip("When on, Heading is no longer a free value you set directly - holding a bank angle continuously turns the aircraft.")]
     public bool autoTurnWithRoll = true;
 
     [Header("Speed Dynamics")]
-    [Tooltip("When on, displayed speed includes a bounded offset based on Roll Input.")]
     public bool speedReactsToRoll = true;
-
-    [Tooltip("Maximum speed deviation (knots) in either direction, reached at full +/-1 Roll Input.")]
     [Min(0f)] public float speedRollDeviation = 15f;
 
     [Header("Altitude Dynamics")]
-    [Tooltip("Default direction altitude changes if not defined in the page list.")]
     public AltitudeChangeDirection altimeterDirection = AltitudeChangeDirection.Increase;
-
-    [Tooltip("Default speed/rate at which altitude changes (feet/second) if not defined in the page list.")]
     public float altimeterSpeed = 10f;
 
-    [Tooltip("Per-page configuration list for altimeter speeds, directions, and page altitudes.")]
     [SerializeField] private List<PageAltimeterConfig> pageAltimeterSpeeds = new List<PageAltimeterConfig>();
-
-    [Tooltip("When on, displayed altitude includes a bounded offset based on Roll Input.")]
     public bool altitudeReactsToRoll = true;
-
-    [Tooltip("Maximum altitude deviation (feet) in either direction, reached at full +/-1 Roll Input.")]
     [Min(0f)] public float altitudeRollDeviation = 10f;
 
     [Header("Pitch Dynamics")]
-    [Tooltip("When on, the attitude indicator's horizon visibly moves up/down driven by altitude's actual current climb/descent RATE.")]
     public bool pitchReactsToAltitude = true;
-
-    [Tooltip("Maximum visible pitch (degrees), reached once altitude is changing at Pitch Rate Reference (ft/min) or faster.")]
     [Min(0f)] public float maxPitchDegrees = 15f;
-
-    [Tooltip("Climb/descent rate (ft/min) that produces the full Max Pitch Degrees.")]
     [Min(1f)] public float pitchRateReference = 1000f;
 
     // ==================================================
@@ -244,11 +332,10 @@ public class A320PFD : MonoBehaviour
     [SerializeField] private bool isBaked = false;
 
     // ==================================================
-    // Runtime-generated references
+    // Runtime References & State
     // ==================================================
     [HideInInspector] [SerializeField] private Canvas canvas;
     [HideInInspector] [SerializeField] private RectTransform pfdRoot;
-
     [HideInInspector] [SerializeField] private RectTransform attitudeContainer;
     [HideInInspector] [SerializeField] private RectTransform horizonPivot;
     [HideInInspector] [SerializeField] private RectTransform rollPointer;
@@ -327,8 +414,65 @@ public class A320PFD : MonoBehaviour
     // Altimeter Start/Stop Control Flag
     private bool isAltimeterActive = false;
 
+    // QNH Runtime State
+    private float currentTargetQNH;
+    private int wrongQNHAttempts;
+    private bool qnhSolved;
+    private bool isValidatingQNH;
+    private int previousQNHPageIndex = -1;
+    private readonly Dictionary<int, string> savedQNHValues = new Dictionary<int, string>();
+    private readonly Dictionary<int, bool> savedQNHImageStates = new Dictionary<int, bool>();
+
     public float CurrentTransitionLevel => altitude;
     public PageTransitionConfig ActiveTransitionConfig => activeTransitionConfig;
+
+    private PageQNHConfig CurrentQNHConfig
+    {
+        get
+        {
+            int currentPage = PageNavigationController.CurrentIndex;
+            foreach (PageQNHConfig config in qnhPageConfigurations)
+            {
+                if (config.pageIndex == currentPage && !config.solved)
+                {
+                    return config;
+                }
+            }
+            return null;
+        }
+    }
+
+    private TMP_InputField ActiveQNHInputField => CurrentQNHConfig != null ? CurrentQNHConfig.inputField : null;
+    private Image ActiveQNHImage => CurrentQNHConfig != null ? CurrentQNHConfig.feedbackImage : null;
+
+    private float ActiveQNHAnswer
+    {
+        get
+        {
+            if (CurrentQNHConfig == null) return 0f;
+
+            switch (CurrentQNHConfig.answerMode)
+            {
+                case QNHAnswerMode.DynamicRandom:
+                case QNHAnswerMode.PresetGenerated:
+                    return GetTargetQNHForConfig(CurrentQNHConfig);
+
+                case QNHAnswerMode.StaticAnswer:
+                    return CurrentQNHConfig.correctAnswer;
+
+                case QNHAnswerMode.RangeAnswer:
+                    float targetVal = (CurrentQNHConfig.minCorrectRange + CurrentQNHConfig.maxCorrectRange) / 2f;
+                    if (CurrentQNHConfig.exceptValue != 0f && Mathf.Abs(targetVal - CurrentQNHConfig.exceptValue) <= qnhMatchTolerance)
+                    {
+                        targetVal += 1f;
+                    }
+                    return targetVal;
+
+                default:
+                    return CurrentQNHConfig.correctAnswer;
+            }
+        }
+    }
 
     private void OnValidate()
     {
@@ -361,19 +505,45 @@ public class A320PFD : MonoBehaviour
     private void OnEnable()
     {
         PageNavigationController.OnPageChanged += HandlePageChanged;
+        ActivateOnlyCurrentQNHField();
     }
 
     private void Start()
     {
-        // Sync active page state when starting up
         int initialPage = PageNavigationController.CurrentIndex;
         SetAltimeterSpeedForPage(initialPage);
         UpdateActiveTransitionConfig(initialPage);
+
+        // QNH Initialization
+        foreach (PageQNHConfig config in qnhPageConfigurations)
+        {
+            if (config.inputField != null)
+            {
+                PageQNHConfig capturedConfig = config;
+                config.inputField.onValueChanged.AddListener((value) => OnQNHInputFieldChanged(capturedConfig, value));
+            }
+        }
+
+        if (qnhValidateButton != null)
+        {
+            qnhValidateButton.onClick.RemoveAllListeners();
+            qnhValidateButton.onClick.AddListener(OnValidateQNHPressed);
+        }
+
+        if (qnhAutoFillButton != null)
+        {
+            qnhAutoFillButton.onClick.RemoveAllListeners();
+            qnhAutoFillButton.onClick.AddListener(AutoFillQNH);
+        }
+
+        ResetAllQNH();
+        SetupPageTargetQNH(initialPage);
+        HideQNHFeedback();
     }
 
     private void OnDisable()
     {
-        //PageNavigationController.OnPageChanged -= HandlePageChanged;
+        PageNavigationController.OnPageChanged -= HandlePageChanged;
     }
 
     private void HandlePageChanged(int pageIndex)
@@ -386,6 +556,56 @@ public class A320PFD : MonoBehaviour
         }
 
         UpdateActiveTransitionConfig(pageIndex);
+
+        // QNH Page Transition Handling
+        HideQNHFeedback();
+        SetupPageTargetQNH(pageIndex);
+
+        if (previousQNHPageIndex > pageIndex)
+        {
+            for (int i = 0; i < qnhPageConfigurations.Count; i++)
+            {
+                PageQNHConfig config = qnhPageConfigurations[i];
+                if (config.pageIndex == previousQNHPageIndex)
+                {
+                    if (config.inputField != null)
+                    {
+                        savedQNHValues[i] = config.inputField.text;
+                        config.inputField.text = "";
+                    }
+
+                    if (config.feedbackImage != null)
+                    {
+                        savedQNHImageStates[i] = config.feedbackImage.gameObject.activeSelf;
+                        config.feedbackImage.gameObject.SetActive(false);
+                    }
+
+                    config.solved = false;
+                    config.currentEnteredValue = 0f;
+                    EnableQNHFieldObjects(config, false);
+                }
+            }
+        }
+
+        for (int i = 0; i < qnhPageConfigurations.Count; i++)
+        {
+            PageQNHConfig config = qnhPageConfigurations[i];
+            if (config.pageIndex == pageIndex)
+            {
+                if (config.inputField != null && savedQNHValues.ContainsKey(i))
+                {
+                    config.inputField.text = savedQNHValues[i];
+                }
+
+                if (config.feedbackImage != null && savedQNHImageStates.ContainsKey(i))
+                {
+                    config.feedbackImage.gameObject.SetActive(savedQNHImageStates[i]);
+                }
+            }
+        }
+
+        previousQNHPageIndex = pageIndex;
+        ActivateOnlyCurrentQNHField();
     }
 
     private void SetAltimeterSpeedForPage(int targetPageIndex)
@@ -427,7 +647,6 @@ public class A320PFD : MonoBehaviour
             UpdateILSAndFD();
         }
 
-        // Process Transition Layer Operations
         UpdateCurrentTransitionLevelUI();
 
         if (activeTransitionConfig != null)
@@ -460,26 +679,17 @@ public class A320PFD : MonoBehaviour
     // ==================================================
     public void TriggerCurrentStartActivation()
     {
-        if (activeTransitionConfig != null)
-        {
-            TriggerStartActivation(activeTransitionConfig);
-        }
+        if (activeTransitionConfig != null) TriggerStartActivation(activeTransitionConfig);
     }
 
     public void TriggerCurrentCautionActivation()
     {
-        if (activeTransitionConfig != null)
-        {
-            TriggerCautionActivation(activeTransitionConfig);
-        }
+        if (activeTransitionConfig != null) TriggerCautionActivation(activeTransitionConfig);
     }
 
     public void TriggerCurrentEndActivation()
     {
-        if (activeTransitionConfig != null)
-        {
-            TriggerEndActivation(activeTransitionConfig);
-        }
+        if (activeTransitionConfig != null) TriggerEndActivation(activeTransitionConfig);
     }
 
     private void UpdateCurrentTransitionLevelUI()
@@ -538,10 +748,7 @@ public class A320PFD : MonoBehaviour
             ? altitude >= config.startTransitionLayerLimit 
             : altitude <= config.startTransitionLayerLimit;
 
-        if (limitReached)
-        {
-            TriggerStartActivation(config);
-        }
+        if (limitReached) TriggerStartActivation(config);
     }
 
     public void TriggerStartActivation(PageTransitionConfig config)
@@ -567,15 +774,8 @@ public class A320PFD : MonoBehaviour
 
         if (hasPassedCaution)
         {
-            if (!cautionActivatedPages.Contains(config.pageIndex))
-            {
-                TriggerCautionActivation(config);
-            }
-
-            if (!cautionTriggeredPages.Contains(config.pageIndex))
-            {
-                cautionTriggeredPages.Add(config.pageIndex);
-            }
+            if (!cautionActivatedPages.Contains(config.pageIndex)) TriggerCautionActivation(config);
+            if (!cautionTriggeredPages.Contains(config.pageIndex)) cautionTriggeredPages.Add(config.pageIndex);
         }
         else if (cautionTriggeredPages.Contains(config.pageIndex))
         {
@@ -606,10 +806,7 @@ public class A320PFD : MonoBehaviour
             ? altitude >= config.endTransitionLayerLimit
             : altitude <= config.endTransitionLayerLimit;
 
-        if (limitReached)
-        {
-            TriggerEndActivation(config);
-        }
+        if (limitReached) TriggerEndActivation(config);
     }
 
     public void TriggerEndActivation(PageTransitionConfig config)
@@ -638,11 +835,7 @@ public class A320PFD : MonoBehaviour
         if (isMet)
         {
             completedPages.Add(config.pageIndex);
-
-            if (config.autoUnlockNavigation)
-            {
-                PageNavigationController.RequestNavigationUnlock();
-            }
+            if (config.autoUnlockNavigation) PageNavigationController.RequestNavigationUnlock();
         }
     }
 
@@ -663,10 +856,516 @@ public class A320PFD : MonoBehaviour
     public void EnableBypassForPage(int pageIndex)
     {
         PageTransitionConfig config = GetTransitionConfigForPage(pageIndex);
-        if (config != null)
+        if (config != null) config.bypassObjectActivation = true;
+    }
+
+    // ==================================================
+    // QNH Core Management & Generation
+    // ==================================================
+    private void SetupPageTargetQNH(int pageIndex)
+    {
+        if (CurrentQNHConfig != null)
         {
-            config.bypassObjectActivation = true;
+            currentTargetQNH = GetTargetQNHForConfig(CurrentQNHConfig);
+            onQNHTargetReached?.Invoke();
         }
+    }
+
+    public float GetTargetQNHForConfig(PageQNHConfig config)
+    {
+        if (config == null)
+        {
+            Debug.LogWarning("[A320PFD] QNH Configuration is null. Returning default target value.");
+            return defaultTargetQNH;
+        }
+
+        if (config.answerMode == QNHAnswerMode.DynamicRandom && config.generatedTargetQNH == 0f)
+        {
+            config.generatedTargetQNH = UnityEngine.Random.Range(minQNHRange, maxQNHRange + 1);
+            Debug.Log($"[A320PFD] Dynamically Generated QNH {config.generatedTargetQNH} for page index {config.pageIndex}");
+        }
+
+        float activeTargetValue = config.answerMode switch
+        {
+            QNHAnswerMode.StaticAnswer => config.correctAnswer,
+            QNHAnswerMode.RangeAnswer => config.minCorrectRange,
+            _ => config.generatedTargetQNH
+        };
+
+        if (config.qnhDisplayText != null)
+        {
+            if (config.answerMode == QNHAnswerMode.RangeAnswer)
+            {
+                config.qnhDisplayText.text = config.exceptValue != 0f 
+                    ? $"{config.minCorrectRange:F0}-{config.maxCorrectRange:F0} (Excl: {config.exceptValue:F0})" 
+                    : $"{config.minCorrectRange:F0}-{config.maxCorrectRange:F0}";
+            }
+            else
+            {
+                config.qnhDisplayText.text = activeTargetValue.ToString("F0");
+            }
+        }
+
+        return activeTargetValue;
+    }
+
+    public float GetTargetQNHForPage(int pageIndex)
+    {
+        PageQNHConfig config = qnhPageConfigurations.Find(c => c.pageIndex == pageIndex && !c.solved) ?? qnhPageConfigurations.Find(c => c.pageIndex == pageIndex);
+        return GetTargetQNHForConfig(config);
+    }
+
+    public float GetCurrentTargetQNH() => currentTargetQNH;
+
+    public void RegenerateQNHForPage(int pageIndex)
+    {
+        PageQNHConfig config = qnhPageConfigurations.Find(c => c.pageIndex == pageIndex && !c.solved) ?? qnhPageConfigurations.Find(c => c.pageIndex == pageIndex);
+
+        if (config == null)
+        {
+            Debug.LogWarning($"[A320PFD] Cannot regenerate QNH. No config found for Page {pageIndex}.");
+            return;
+        }
+
+        config.generatedTargetQNH = UnityEngine.Random.Range(minQNHRange, maxQNHRange + 1);
+
+        if (config.qnhDisplayText != null)
+        {
+            config.qnhDisplayText.text = config.generatedTargetQNH.ToString("F0");
+        }
+
+        if (PageNavigationController.CurrentIndex == pageIndex && CurrentQNHConfig == config)
+        {
+            currentTargetQNH = config.generatedTargetQNH;
+        }
+    }
+
+    // ==================================================
+    // QNH Inputs & Validation
+    // ==================================================
+    public void OnQNHDigitPressed(string digit)
+    {
+        if (qnhSolved || isValidatingQNH || ActiveQNHInputField == null || !ActiveQNHInputField.interactable) return;
+
+        HideQNHFeedback();
+        int maxLength = ActiveQNHAnswer.ToString().Contains(".") ? 6 : 4;
+        if (ActiveQNHInputField.text.Length >= maxLength) return;
+
+        ActiveQNHInputField.text += digit;
+    }
+
+    public void OnQNHDecimalPressed()
+    {
+        if (qnhSolved || isValidatingQNH || ActiveQNHInputField == null || !ActiveQNHInputField.interactable) return;
+
+        HideQNHFeedback();
+        int maxLength = ActiveQNHAnswer.ToString().Contains(".") ? 6 : 4;
+        if (ActiveQNHInputField.text.Length >= maxLength) return;
+
+        if (!ActiveQNHInputField.text.Contains("."))
+        {
+            ActiveQNHInputField.text = string.IsNullOrEmpty(ActiveQNHInputField.text) ? "0." : ActiveQNHInputField.text + ".";
+        }
+    }
+
+    public void OnQNHBackspacePressed()
+    {
+        if (qnhSolved || isValidatingQNH || ActiveQNHInputField == null || !ActiveQNHInputField.interactable) return;
+
+        HideQNHFeedback();
+        if (ActiveQNHInputField.text.Length > 0)
+        {
+            ActiveQNHInputField.text = ActiveQNHInputField.text.Substring(0, ActiveQNHInputField.text.Length - 1);
+        }
+    }
+
+    public void OnValidateQNHPressed()
+    {
+        ValidateQNH();
+    }
+
+    public void ModifyEnteredQNH(float delta)
+    {
+        PageQNHConfig current = CurrentQNHConfig;
+        if (current == null || qnhSolved || isValidatingQNH) return;
+
+        current.currentEnteredValue += delta;
+        UpdateQNHUI(current);
+        onEnteredQNHChanged?.Invoke(current.currentEnteredValue);
+    }
+
+    public void SetEnteredQNH(float value)
+    {
+        PageQNHConfig current = CurrentQNHConfig;
+        if (current == null || qnhSolved || isValidatingQNH) return;
+
+        current.currentEnteredValue = value;
+        UpdateQNHUI(current);
+        onEnteredQNHChanged?.Invoke(current.currentEnteredValue);
+    }
+
+    private void OnQNHInputFieldChanged(PageQNHConfig config, string textValue)
+    {
+        if (float.TryParse(textValue, out float result))
+        {
+            config.currentEnteredValue = result;
+            if (config == CurrentQNHConfig)
+            {
+                onEnteredQNHChanged?.Invoke(result);
+            }
+        }
+        else if (string.IsNullOrWhiteSpace(textValue))
+        {
+            config.currentEnteredValue = 0f;
+        }
+    }
+
+    public void ValidateQNH()
+    {
+        if (qnhSolved || isValidatingQNH || CurrentQNHConfig == null) return;
+
+        PageQNHConfig current = CurrentQNHConfig;
+        bool isCorrect = false;
+
+        if (current.answerMode == QNHAnswerMode.RangeAnswer)
+        {
+            bool isInRange = current.currentEnteredValue >= current.minCorrectRange && 
+                             current.currentEnteredValue <= current.maxCorrectRange;
+
+            bool isExcluded = current.exceptValue != 0f && 
+                             Mathf.Abs(current.currentEnteredValue - current.exceptValue) <= qnhMatchTolerance;
+
+            isCorrect = isInRange && !isExcluded;
+        }
+        else
+        {
+            float targetAnswer = ActiveQNHAnswer;
+            isCorrect = Mathf.Abs(current.currentEnteredValue - targetAnswer) <= qnhMatchTolerance;
+        }
+
+        if (!isCorrect)
+        {
+            wrongQNHAttempts++;
+
+            if (qnhAudioSource != null && qnhWrongSound != null)
+            {
+                qnhAudioSource.PlayOneShot(qnhWrongSound);
+            }
+
+            ShowQNHFeedback();
+            onQNHMismatch?.Invoke();
+
+            if (wrongQNHAttempts >= maxWrongQNHAttempts && qnhAutoFillButton != null)
+            {
+                qnhAutoFillButton.gameObject.SetActive(true);
+            }
+
+            StartCoroutine(ShowWrongQNHIconRoutine());
+            return;
+        }
+
+        StartCoroutine(ValidateAndAdvanceQNHRoutine());
+    }
+
+    private IEnumerator ValidateAndAdvanceQNHRoutine()
+    {
+        isValidatingQNH = true;
+        HideQNHFeedback();
+
+        PageQNHConfig current = CurrentQNHConfig;
+
+        if (ActiveQNHImage != null)
+        {
+            ActiveQNHImage.sprite = qnhCorrectSprite;
+            ActiveQNHImage.gameObject.SetActive(true);
+        }
+
+        if (qnhAudioSource != null && qnhCorrectSound != null)
+        {
+            qnhAudioSource.PlayOneShot(qnhCorrectSound);
+        }
+
+        if (current != null)
+        {
+            current.solved = true;
+
+            if (current.inputField != null)
+            {
+                current.inputField.interactable = false;
+            }
+
+            EnableQNHFieldObjects(current, true);
+            current.onPageCorrectAnswer?.Invoke();
+        }
+
+        TriggerCurrentEndActivation();
+
+        onQNHMatched?.Invoke();
+        wrongQNHAttempts = 0;
+
+        if (qnhAutoFillButton != null)
+        {
+            qnhAutoFillButton.gameObject.SetActive(false);
+        }
+
+        yield return null;
+        isValidatingQNH = false;
+
+        CheckNextQNHFieldOrAutoFill();
+    }
+
+    private void CheckNextQNHFieldOrAutoFill()
+    {
+        PageQNHConfig nextField = CurrentQNHConfig;
+
+        if (nextField == null)
+        {
+            onQNHPageFieldsCompleted?.Invoke();
+            PageNavigationController.RequestNavigationUnlock();
+            CheckTotalQNHPuzzleCompletion();
+            return;
+        }
+
+        SetupPageTargetQNH(PageNavigationController.CurrentIndex);
+
+        if (nextField.inputField != null && string.IsNullOrEmpty(nextField.inputField.text))
+        {
+            nextField.inputField.text = "";
+        }
+
+        ActivateOnlyCurrentQNHField();
+    }
+
+    private IEnumerator AutoFillSpecificQNHFieldRoutine(PageQNHConfig targetField)
+    {
+        isValidatingQNH = true;
+
+        if (targetField.autoFillDelay > 0f)
+        {
+            yield return new WaitForSeconds(targetField.autoFillDelay);
+        }
+
+        float targetValue = targetField.answerMode switch
+        {
+            QNHAnswerMode.StaticAnswer => targetField.correctAnswer,
+            QNHAnswerMode.RangeAnswer => ActiveQNHAnswer,
+            _ => GetTargetQNHForConfig(targetField)
+        };
+
+        targetField.currentEnteredValue = targetValue;
+        UpdateQNHUI(targetField);
+        onEnteredQNHChanged?.Invoke(targetValue);
+
+        isValidatingQNH = false;
+        StartCoroutine(ValidateAndAdvanceQNHRoutine());
+    }
+
+    private IEnumerator ShowWrongQNHIconRoutine()
+    {
+        isValidatingQNH = true;
+
+        if (ActiveQNHImage != null)
+        {
+            ActiveQNHImage.sprite = qnhWrongSprite;
+            ActiveQNHImage.gameObject.SetActive(true);
+        }
+
+        ShowQNHFeedback();
+
+        yield return new WaitForSeconds(0.7f);
+
+        if (ActiveQNHImage != null)
+        {
+            ActiveQNHImage.gameObject.SetActive(false);
+        }
+
+        PageQNHConfig current = CurrentQNHConfig;
+        if (current != null)
+        {
+            current.currentEnteredValue = 0f;
+            UpdateQNHUI(current);
+
+            if (current.inputField != null)
+            {
+                current.inputField.Select();
+                current.inputField.ActivateInputField();
+            }
+        }
+
+        isValidatingQNH = false;
+    }
+
+    public void AutoFillQNH()
+    {
+        if (qnhSolved || isValidatingQNH || CurrentQNHConfig == null) return;
+
+        HideQNHFeedback();
+        float targetValue = ActiveQNHAnswer;
+
+        PageQNHConfig current = CurrentQNHConfig;
+        current.currentEnteredValue = targetValue;
+        UpdateQNHUI(current);
+        onEnteredQNHChanged?.Invoke(targetValue);
+
+        ValidateQNH();
+    }
+
+    private void ActivateOnlyCurrentQNHField()
+    {
+        int currentPage = PageNavigationController.CurrentIndex;
+
+        foreach (PageQNHConfig config in qnhPageConfigurations)
+        {
+            if (config.inputField != null)
+            {
+                config.inputField.interactable = false;
+            }
+        }
+
+        PageQNHConfig active = CurrentQNHConfig;
+
+        if (active != null && !active.solved && !active.isAutoFillField)
+        {
+            if (active.inputField != null)
+            {
+                active.inputField.interactable = true;
+                active.inputField.Select();
+                active.inputField.ActivateInputField();
+            }
+        }
+
+        UpdateQNHPageObjectsVisibility(currentPage);
+
+        if (active != null && active.isAutoFillField)
+        {
+            StartCoroutine(AutoFillSpecificQNHFieldRoutine(active));
+        }
+    }
+
+    private void UpdateQNHUI(PageQNHConfig config)
+    {
+        if (config == null) return;
+
+        string formattedVal = config.currentEnteredValue == 0f ? "" : config.currentEnteredValue.ToString("F0");
+
+        if (config.enteredQNHText != null)
+        {
+            config.enteredQNHText.text = formattedVal;
+        }
+
+        if (config.inputField != null && config.inputField.text != formattedVal)
+        {
+            config.inputField.text = formattedVal;
+        }
+    }
+
+    private void EnableQNHFieldObjects(PageQNHConfig config, bool enable)
+    {
+        if (config?.objectsToEnable == null) return;
+
+        foreach (GameObject obj in config.objectsToEnable)
+        {
+            if (obj != null) obj.SetActive(enable);
+        }
+    }
+
+    private void UpdateQNHPageObjectsVisibility(int currentPageIndex)
+    {
+        foreach (PageQNHConfig config in qnhPageConfigurations)
+        {
+            if (config.objectsToEnable == null) continue;
+
+            bool shouldBeActive = config.solved && config.pageIndex == currentPageIndex;
+
+            foreach (GameObject obj in config.objectsToEnable)
+            {
+                if (obj != null) obj.SetActive(shouldBeActive);
+            }
+        }
+    }
+
+    private void ShowQNHFeedback()
+    {
+        if (qnhFeedbackText != null) qnhFeedbackText.gameObject.SetActive(true);
+    }
+
+    private void HideQNHFeedback()
+    {
+        if (qnhFeedbackText != null) qnhFeedbackText.gameObject.SetActive(false);
+    }
+
+    private void CheckTotalQNHPuzzleCompletion()
+    {
+        foreach (PageQNHConfig config in qnhPageConfigurations)
+        {
+            if (!config.solved) return;
+        }
+
+        qnhSolved = true;
+
+        if (qnhValidateButton != null) qnhValidateButton.interactable = false;
+        if (qnhAutoFillButton != null) qnhAutoFillButton.gameObject.SetActive(false);
+
+        HideQNHFeedback();
+        onAllQNHAnswersVerified?.Invoke();
+    }
+
+    public void ResetAllQNH()
+    {
+        qnhSolved = false;
+        isValidatingQNH = false;
+        wrongQNHAttempts = 0;
+
+        savedQNHValues.Clear();
+        savedQNHImageStates.Clear();
+
+        if (qnhValidateButton != null) qnhValidateButton.interactable = true;
+        if (qnhAutoFillButton != null) qnhAutoFillButton.gameObject.SetActive(false);
+
+        HideQNHFeedback();
+
+        foreach (PageQNHConfig config in qnhPageConfigurations)
+        {
+            config.solved = false;
+            config.currentEnteredValue = 0f;
+
+            if (config.answerMode == QNHAnswerMode.DynamicRandom)
+            {
+                config.generatedTargetQNH = 0f;
+            }
+
+            if (config.inputField != null)
+            {
+                config.inputField.text = "";
+                config.inputField.interactable = false;
+            }
+
+            if (config.enteredQNHText != null)
+            {
+                config.enteredQNHText.text = "";
+            }
+
+            if (config.feedbackImage != null)
+            {
+                config.feedbackImage.gameObject.SetActive(false);
+            }
+
+            EnableQNHFieldObjects(config, false);
+        }
+
+        ActivateOnlyCurrentQNHField();
+    }
+
+    public void SetQNHRange(int minRange, int maxRange)
+    {
+        if (minRange > maxRange)
+        {
+            Debug.LogWarning("[A320PFD] Invalid QNH range. Minimum cannot be greater than maximum.");
+            return;
+        }
+
+        minQNHRange = minRange;
+        maxQNHRange = maxRange;
     }
 
 #if UNITY_EDITOR
@@ -713,7 +1412,7 @@ public class A320PFD : MonoBehaviour
     }
 
     // ==================================================
-    // Build
+    // Build PFD
     // ==================================================
     private void BuildPFD()
     {
@@ -758,7 +1457,6 @@ public class A320PFD : MonoBehaviour
         pfdRoot.gameObject.AddComponent<RectMask2D>();
     }
 
-    // -------------------- Attitude Indicator --------------------
     private void BuildAttitudeIndicator()
     {
         attitudeRadius = Mathf.Min(pfdSize.x, pfdSize.y) * 0.30f;
@@ -845,7 +1543,6 @@ public class A320PFD : MonoBehaviour
         ci.raycastTarget = false;
     }
 
-    // -------------------- Roll Scale --------------------
     private void BuildRollScale()
     {
         rollScaleRadius = attitudeRadius * 1.12f;
@@ -880,7 +1577,6 @@ public class A320PFD : MonoBehaviour
         pointerImg.raycastTarget = false;
     }
 
-    // -------------------- Speed Tape --------------------
     private void BuildSpeedTape()
     {
         speedTapeHeight = pfdSize.y * 0.62f;
@@ -914,7 +1610,6 @@ public class A320PFD : MonoBehaviour
         SetRect(speedBoxText.rectTransform, new Vector2(size.x + 10f, 30f), Vector2.zero);
     }
 
-    // -------------------- Altitude Tape --------------------
     private void BuildAltitudeTape()
     {
         altTapeHeight = pfdSize.y * 0.62f;
@@ -954,7 +1649,6 @@ public class A320PFD : MonoBehaviour
         SetRect(altBoxText.rectTransform, new Vector2(size.x + 10f, 30f), Vector2.zero);
     }
 
-    // -------------------- Heading Tape --------------------
     private void BuildHeadingTape()
     {
         headingTapeWidth = pfdSize.x * 0.5f;
@@ -990,7 +1684,6 @@ public class A320PFD : MonoBehaviour
         SetRect(headingBoxText.rectTransform, new Vector2(52f, size.y), Vector2.zero);
     }
 
-    // -------------------- Flight Director / LOC / GS --------------------
     private void BuildFlightDirectorAndILS()
     {
         locHalfRange = attitudeRadius * 0.65f;
@@ -1047,7 +1740,6 @@ public class A320PFD : MonoBehaviour
         gsImg.raycastTarget = false;
     }
 
-    // -------------------- Labels --------------------
     private void BuildLabels()
     {
         CreateHeaderLabel("SPD", new Vector2(-(attitudeRadius + pfdSize.x * 0.055f + 35f), speedTapeHeight * 0.5f + 20f), greenColor);
@@ -1080,7 +1772,6 @@ public class A320PFD : MonoBehaviour
     // ==================================================
     private void UpdateAltitudeFromSpeed()
     {
-        // Only modify altitude if the altimeter has been explicitly started by an event trigger
         if (!isAltimeterActive) return;
 
         switch (altimeterDirection)
