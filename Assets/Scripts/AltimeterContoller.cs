@@ -766,29 +766,25 @@ public class A320PFD : MonoBehaviour
         OnStartObjectsActivated?.Invoke(config.pageIndex);
     }
 
-private void CheckCautionLimit(PageTransitionConfig config)
-{
-    // Ignore caution popups if the QNH for this page is already solved
-    PageQNHConfig qnhConfig = qnhPageConfigurations.Find(c => c.pageIndex == config.pageIndex);
-    if (qnhConfig != null && qnhConfig.solved) return;
-
-    bool hasPassedCaution = config.IsAscending
-        ? altitude >= config.cautionLimit
-        : altitude <= config.cautionLimit;
-
-    if (hasPassedCaution)
+    private void CheckCautionLimit(PageTransitionConfig config)
     {
-        if (!cautionActivatedPages.Contains(config.pageIndex))
-        {
-            TriggerCautionActivation(config);
-        }
+        bool hasPassedCaution = config.IsAscending
+            ? altitude >= config.cautionLimit
+            : altitude <= config.cautionLimit;
 
-        if (!cautionTriggeredPages.Contains(config.pageIndex))
+        if (hasPassedCaution)
         {
-            cautionTriggeredPages.Add(config.pageIndex);
+            if (!cautionActivatedPages.Contains(config.pageIndex))
+            {
+                TriggerCautionActivation(config);
+            }
+
+            if (!cautionTriggeredPages.Contains(config.pageIndex))
+            {
+                cautionTriggeredPages.Add(config.pageIndex);
+            }
         }
     }
-}
 
     public void TriggerCautionActivation(PageTransitionConfig config)
     {
@@ -805,23 +801,19 @@ private void CheckCautionLimit(PageTransitionConfig config)
         OnCautionObjectsActivated?.Invoke(config.pageIndex);
     }
 
-private void CheckEndTransitionLimit(PageTransitionConfig config)
-{
-    // Ignore end limit triggers if QNH for this page is solved
-    PageQNHConfig qnhConfig = qnhPageConfigurations.Find(c => c.pageIndex == config.pageIndex);
-    if (qnhConfig != null && qnhConfig.solved) return;
-
-    if (endActivatedPages.Contains(config.pageIndex)) return;
-
-    bool limitReached = config.IsAscending
-        ? altitude >= config.endTransitionLayerLimit
-        : altitude <= config.endTransitionLayerLimit;
-
-    if (limitReached)
+    private void CheckEndTransitionLimit(PageTransitionConfig config)
     {
-        TriggerEndActivation(config);
+        if (endActivatedPages.Contains(config.pageIndex)) return;
+
+        bool limitReached = config.IsAscending
+            ? altitude >= config.endTransitionLayerLimit
+            : altitude <= config.endTransitionLayerLimit;
+
+        if (limitReached)
+        {
+            TriggerEndActivation(config);
+        }
     }
-}
 
     public void TriggerEndActivation(PageTransitionConfig config)
     {
@@ -1081,57 +1073,50 @@ private void CheckEndTransitionLimit(PageTransitionConfig config)
         StartCoroutine(ValidateAndAdvanceQNHRoutine());
     }
 
-private IEnumerator ValidateAndAdvanceQNHRoutine()
-{
-    isValidatingQNH = true;
-    HideQNHFeedback();
-
-    PageQNHConfig current = CurrentQNHConfig;
-
-    if (ActiveQNHImage != null)
+    private IEnumerator ValidateAndAdvanceQNHRoutine()
     {
-        ActiveQNHImage.sprite = qnhCorrectSprite;
-        ActiveQNHImage.gameObject.SetActive(true);
-    }
+        isValidatingQNH = true;
+        HideQNHFeedback();
 
-    if (qnhAudioSource != null && qnhCorrectSound != null)
-    {
-        qnhAudioSource.PlayOneShot(qnhCorrectSound);
-    }
+        PageQNHConfig current = CurrentQNHConfig;
 
-    if (current != null)
-    {
-        current.solved = true;
-
-        if (current.inputField != null)
+        if (ActiveQNHImage != null)
         {
-            current.inputField.interactable = false;
+            ActiveQNHImage.sprite = qnhCorrectSprite;
+            ActiveQNHImage.gameObject.SetActive(true);
         }
 
-        EnableQNHFieldObjects(current, true);
-        current.onPageCorrectAnswer?.Invoke();
+        if (qnhAudioSource != null && qnhCorrectSound != null)
+        {
+            qnhAudioSource.PlayOneShot(qnhCorrectSound);
+        }
+
+        if (current != null)
+        {
+            current.solved = true;
+
+            if (current.inputField != null)
+            {
+                current.inputField.interactable = false;
+            }
+
+            EnableQNHFieldObjects(current, true);
+            current.onPageCorrectAnswer?.Invoke();
+        }
+
+        onQNHMatched?.Invoke();
+        wrongQNHAttempts = 0;
+
+        if (qnhAutoFillButton != null)
+        {
+            qnhAutoFillButton.gameObject.SetActive(false);
+        }
+
+        yield return null;
+        isValidatingQNH = false;
+
+        CheckNextQNHFieldOrAutoFill();
     }
-
-    // Disable caution and end GameObjects if they were already turned on
-    if (activeTransitionConfig != null)
-    {
-        DeactivateObjects(activeTransitionConfig.cautionTargetGameObjects);
-        DeactivateObjects(activeTransitionConfig.endTargetGameObjects);
-    }
-
-    onQNHMatched?.Invoke();
-    wrongQNHAttempts = 0;
-
-    if (qnhAutoFillButton != null)
-    {
-        qnhAutoFillButton.gameObject.SetActive(false);
-    }
-
-    yield return null;
-    isValidatingQNH = false;
-
-    CheckNextQNHFieldOrAutoFill();
-}
 
     private void CheckNextQNHFieldOrAutoFill()
     {
