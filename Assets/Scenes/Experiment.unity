@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
+  m_SkyboxMaterial: {fileID: 2100000, guid: a32ecd2fe59f0fe48ba2f7b86692a6d9, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -135214,6 +135214,57 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 944261149}
   m_Mesh: {fileID: -460466494597750755, guid: 69acb39daa3350048bf1643e74b32195, type: 3}
+--- !u!1 &944754789
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 944754790}
+  - component: {fileID: 944754791}
+  m_Layer: 0
+  m_Name: SkyBoxRotator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &944754790
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 944754789}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1105166460}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &944754791
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 944754789}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd56b1cbd74dd5042bd4e748fc0821fc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SkyboxRotator
+  skyboxMaterial: {fileID: 2100000, guid: a32ecd2fe59f0fe48ba2f7b86692a6d9, type: 2}
+  rotationSpeed: {x: 0, y: 0.8, z: 0}
+  clampX: 0
+  clampY: 0
+  clampZ: 0
+  minRotation: {x: 0, y: 0, z: 0}
+  maxRotation: {x: 0, y: 0, z: 0}
 --- !u!1 &945178040
 GameObject:
   m_ObjectHideFlags: 0
@@ -159252,6 +159303,7 @@ Transform:
   - {fileID: 1673917260}
   - {fileID: 2074910727}
   - {fileID: 1667172111}
+  - {fileID: 944754790}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1106382144
@@ -237203,13 +237255,13 @@ MonoBehaviour:
   defaultSkybox: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
   pageSkyboxes:
   - pageIndex: 0
-    skyboxMaterial: {fileID: 2100000, guid: 01f4eb1c73693428d923f1520032e7f9, type: 2}
+    skyboxMaterial: {fileID: 2100000, guid: a32ecd2fe59f0fe48ba2f7b86692a6d9, type: 2}
   - pageIndex: 1
-    skyboxMaterial: {fileID: 2100000, guid: 01f4eb1c73693428d923f1520032e7f9, type: 2}
+    skyboxMaterial: {fileID: 2100000, guid: a32ecd2fe59f0fe48ba2f7b86692a6d9, type: 2}
   - pageIndex: 2
-    skyboxMaterial: {fileID: 2100000, guid: 01f4eb1c73693428d923f1520032e7f9, type: 2}
+    skyboxMaterial: {fileID: 2100000, guid: a32ecd2fe59f0fe48ba2f7b86692a6d9, type: 2}
   - pageIndex: 3
-    skyboxMaterial: {fileID: 2100000, guid: 01f4eb1c73693428d923f1520032e7f9, type: 2}
+    skyboxMaterial: {fileID: 2100000, guid: a32ecd2fe59f0fe48ba2f7b86692a6d9, type: 2}
 --- !u!1 &1674393449
 GameObject:
   m_ObjectHideFlags: 0
