@@ -1,58 +1,100 @@
 using UnityEngine;
+using UnityEngine.UI;
 
+[RequireComponent(typeof(AudioSource))]
 public class CautionUI : MonoBehaviour
 {
-    [Header("Target Panels")]
-    [SerializeField] private GameObject[] panelObjects;
+    [Header("Panel Settings")]
+    [SerializeField] private Image[] panelImages;
 
-    [Header("Blink Duration Settings")]
-    [Tooltip("Time in seconds the panels remain active/visible.")]
-    public float activeDuration = 1.0f;
+    [Header("Alpha Pulse Settings")]
+    [Range(0f, 1f)] public float minAlpha = 0.2f;
+    [Range(0f, 1f)] public float maxAlpha = 0.8f;
+    public float pulseSpeed = 2f;
 
-    [Tooltip("Time in seconds the panels remain inactive/hidden.")]
-    public float inactiveDuration = 0.5f;
-
-    private float timer;
-    private bool isPanelActive = true;
+    [Header("Audio Settings")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip cautionAudioClip;
+    [Range(0f, 1f)] public float audioVolume = 1.0f;
 
     void Start()
     {
-        // Automatically target this GameObject if none are assigned in the Inspector
-        if (panelObjects == null || panelObjects.Length == 0)
+        // Automatically fetch Image components if none are assigned
+        if (panelImages == null || panelImages.Length == 0)
         {
-            panelObjects = new GameObject[] { gameObject };
+            panelImages = GetComponentsInChildren<Image>();
         }
 
-        // Initialize timer to start counting down the active state
-        timer = activeDuration;
-        SetPanelsActive(isPanelActive);
+        // Setup and play continuous audio
+        SetupAudio();
     }
 
     void Update()
     {
-        if (panelObjects == null || panelObjects.Length == 0) return;
+        PulseAlpha();
+    }
 
-        timer -= Time.deltaTime;
-
-        // Toggle state when the timer runs out
-        if (timer <= 0f)
+    private void SetupAudio()
+    {
+        // Get AudioSource component if not manually assigned
+        if (audioSource == null)
         {
-            isPanelActive = !isPanelActive;
-            SetPanelsActive(isPanelActive);
+            audioSource = GetComponent<AudioSource>();
+        }
 
-            // Reset timer based on the new state
-            timer = isPanelActive ? activeDuration : inactiveDuration;
+        if (audioSource != null)
+        {
+            // Assign the clip if provided
+            if (cautionAudioClip != null)
+            {
+                audioSource.clip = cautionAudioClip;
+            }
+
+            audioSource.loop = true; // Set to repeat continuously
+            audioSource.volume = audioVolume;
+
+            // Start playing if a clip is assigned and not already playing
+            if (audioSource.clip != null && !audioSource.isPlaying)
+            {
+                audioSource.Play();
+            }
         }
     }
 
-    private void SetPanelsActive(bool state)
+    private void PulseAlpha()
     {
-        for (int i = 0; i < panelObjects.Length; i++)
+        if (panelImages == null || panelImages.Length == 0) return;
+
+        // Calculate smooth pulse factor between 0 and 1
+        float t = Mathf.PingPong(Time.time * pulseSpeed, 1f);
+        float currentAlpha = Mathf.Lerp(minAlpha, maxAlpha, t);
+
+        // Apply updated alpha to all assigned panel images
+        for (int i = 0; i < panelImages.Length; i++)
         {
-            if (panelObjects[i] != null)
+            if (panelImages[i] != null)
             {
-                panelObjects[i].SetActive(state);
+                Color color = panelImages[i].color;
+                color.a = currentAlpha;
+                panelImages[i].color = color;
             }
+        }
+    }
+
+    // Automatically stop/resume sound if the GameObject is disabled or enabled
+    void OnEnable()
+    {
+        if (audioSource != null && audioSource.clip != null && !audioSource.isPlaying)
+        {
+            audioSource.Play();
+        }
+    }
+
+    void OnDisable()
+    {
+        if (audioSource != null && audioSource.isPlaying)
+        {
+            audioSource.Stop();
         }
     }
 }

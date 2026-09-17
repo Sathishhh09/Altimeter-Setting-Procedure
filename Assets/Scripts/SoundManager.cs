@@ -64,6 +64,29 @@ public class SoundManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Stops playing a specific audio clip if it is currently playing on either source.
+    /// </summary>
+    /// <param name="clip">The AudioClip to stop.</param>
+    public void StopSound(AudioClip clip)
+    {
+        if (clip == null) return;
+
+        // Check if the clip is active on the continuous/looping audio source
+        if (loopingAudioSource != null && loopingAudioSource.isPlaying && loopingAudioSource.clip == clip)
+        {
+            loopingAudioSource.Stop();
+            loopingAudioSource.clip = null;
+        }
+
+        // Check if the clip is active on the SFX audio source
+        if (sfxAudioSource != null && sfxAudioSource.isPlaying && sfxAudioSource.clip == clip)
+        {
+            sfxAudioSource.Stop();
+            sfxAudioSource.clip = null;
+        }
+    }
+
+    /// <summary>
     /// Stops any active non-looping SFX immediately.
     /// </summary>
     public void StopSFX()
