@@ -665,13 +665,13 @@ public class A320PFD : MonoBehaviour
     public void altimeterstart()
     {
         isAltimeterActive = true;
-        Debug.Log("[A320PFD] Altimeter started changing altitude.");
+        Debug.Log("[AltimeterController] Altimeter started changing altitude.");
     }
 
     public void altimeterstop()
     {
         isAltimeterActive = false;
-        Debug.Log("[A320PFD] Altimeter stopped changing altitude.");
+        Debug.Log("[AltimeterController] Altimeter stopped changing altitude.");
     }
 
     // ==================================================
@@ -686,18 +686,6 @@ public class A320PFD : MonoBehaviour
     {
         if (activeTransitionConfig != null) TriggerCautionActivation(activeTransitionConfig);
     }
-
-// public void TriggerEndActivation(PageTransitionConfig config)
-// {
-//     if (!config.bypassObjectActivation && config.endTargetGameObjects != null)
-//     {
-//         foreach (GameObject obj in config.endTargetGameObjects)
-//         {
-//             if (obj != null)
-//                 obj.SetActive(true);
-//         }
-//     }
-// }
 
     private void UpdateCurrentTransitionLevelUI()
     {
@@ -808,128 +796,102 @@ public class A320PFD : MonoBehaviour
         OnCautionObjectsActivated?.Invoke(config.pageIndex);
     }
 
-private void CheckEndTransitionLimit(PageTransitionConfig config)
-{
-    if (endActivatedPages.Contains(config.pageIndex))
-        return;
-
-    bool altitudeMet = config.IsAscending
-        ? altitude >= config.endTransitionLayerLimit
-        : altitude <= config.endTransitionLayerLimit;
-
-    if (!altitudeMet)
-        return;
-
-    PageQNHConfig qnhConfig =
-        qnhPageConfigurations.Find(c => c.pageIndex == config.pageIndex);
-
-    bool qnhRequirementMet =
-        qnhConfig == null || qnhConfig.solved;
-
-    if (!qnhRequirementMet)
-        return;
-
-    TriggerEndActivation(config);
-}
-
-public void TriggerEndActivation(PageTransitionConfig config)
-{
-    if (config == null)
-        return;
-
-    bool altitudeMet = config.IsAscending
-        ? altitude >= config.endTransitionLayerLimit
-        : altitude <= config.endTransitionLayerLimit;
-
-    if (!altitudeMet)
+    private void CheckEndTransitionLimit(PageTransitionConfig config)
     {
-        Debug.Log(
-            $"[A320PFD] End activation blocked. " +
-            $"Altitude {altitude:F0} / Required {config.endTransitionLayerLimit:F0}"
-        );
-        return;
-    }
+        if (endActivatedPages.Contains(config.pageIndex))
+            return;
 
-    PageQNHConfig qnhConfig =
-        qnhPageConfigurations.Find(c => c.pageIndex == config.pageIndex);
+        bool altitudeMet = config.IsAscending
+            ? altitude >= config.endTransitionLayerLimit
+            : altitude <= config.endTransitionLayerLimit;
 
-    bool qnhSolvedForPage =
-        qnhConfig == null || qnhConfig.solved;
+        if (!altitudeMet)
+            return;
 
-    if (!qnhSolvedForPage)
-    {
-        Debug.Log(
-            $"[A320PFD] End activation blocked. " +
-            $"QNH for page {config.pageIndex} is NOT solved."
-        );
-        return;
-    }
+        PageQNHConfig qnhConfig = qnhPageConfigurations.Find(c => c.pageIndex == config.pageIndex);
+        bool qnhRequirementMet = qnhConfig == null || qnhConfig.solved;
 
-    if (endActivatedPages.Contains(config.pageIndex))
-        return;
+        if (!qnhRequirementMet)
+            return;
 
-    if (!config.bypassObjectActivation &&
-        config.endTargetGameObjects != null)
-    {
-        foreach (GameObject obj in config.endTargetGameObjects)
-        {
-            if (obj != null)
-            {
-                obj.SetActive(true);
-            }
-        }
-    }
-
-    endActivatedPages.Add(config.pageIndex);
-
-    config.onEndLimitReached?.Invoke();
-
-    OnEndObjectsActivated?.Invoke(config.pageIndex);
-
-    Debug.Log(
-        $"[A320PFD] END ACTIVATED. " +
-        $"Page={config.pageIndex}, " +
-        $"Altitude={altitude:F0}, " +
-        $"QNH Solved={qnhSolvedForPage}"
-    );
-}
-
-private void EvaluatePageCompletion(PageTransitionConfig config)
-{
-    if (config == null)
-        return;
-
-    bool altitudeMet = config.IsAscending
-        ? altitude >= config.endTransitionLayerLimit
-        : altitude <= config.endTransitionLayerLimit;
-
-    PageQNHConfig qnhConfig =
-        qnhPageConfigurations.Find(c => c.pageIndex == config.pageIndex);
-
-    bool qnhRequirementMet =
-        qnhConfig == null || qnhConfig.solved;
-
-    // Both conditions must be satisfied
-    if (!altitudeMet || !qnhRequirementMet)
-        return;
-
-    // Activate End UI only once
-    if (!endActivatedPages.Contains(config.pageIndex))
-    {
         TriggerEndActivation(config);
     }
 
-    // Mark page completed
-    if (!completedPages.Contains(config.pageIndex))
+    public void TriggerEndActivation(PageTransitionConfig config)
     {
-        completedPages.Add(config.pageIndex);
+        if (config == null)
+            return;
 
-        if (config.autoUnlockNavigation)
+        bool altitudeMet = config.IsAscending
+            ? altitude >= config.endTransitionLayerLimit
+            : altitude <= config.endTransitionLayerLimit;
+
+        if (!altitudeMet)
         {
-            PageNavigationController.RequestNavigationUnlock();
+            Debug.Log($"[AltimeterController] End activation blocked. Altitude {altitude:F0} / Required {config.endTransitionLayerLimit:F0}");
+            return;
+        }
+
+        PageQNHConfig qnhConfig = qnhPageConfigurations.Find(c => c.pageIndex == config.pageIndex);
+        bool qnhSolvedForPage = qnhConfig == null || qnhConfig.solved;
+
+        if (!qnhSolvedForPage)
+        {
+            Debug.Log($"[AltimeterController] End activation blocked. QNH for page {config.pageIndex} is NOT solved.");
+            return;
+        }
+
+        if (endActivatedPages.Contains(config.pageIndex))
+            return;
+
+        if (!config.bypassObjectActivation && config.endTargetGameObjects != null)
+        {
+            foreach (GameObject obj in config.endTargetGameObjects)
+            {
+                if (obj != null)
+                {
+                    obj.SetActive(true);
+                }
+            }
+        }
+
+        endActivatedPages.Add(config.pageIndex);
+        config.onEndLimitReached?.Invoke();
+        OnEndObjectsActivated?.Invoke(config.pageIndex);
+
+        Debug.Log($"[AltimeterController] END ACTIVATED. Page={config.pageIndex}, Altitude={altitude:F0}, QNH Solved={qnhSolvedForPage}");
+    }
+
+    private void EvaluatePageCompletion(PageTransitionConfig config)
+    {
+        if (config == null)
+            return;
+
+        bool altitudeMet = config.IsAscending
+            ? altitude >= config.endTransitionLayerLimit
+            : altitude <= config.endTransitionLayerLimit;
+
+        PageQNHConfig qnhConfig = qnhPageConfigurations.Find(c => c.pageIndex == config.pageIndex);
+        bool qnhRequirementMet = qnhConfig == null || qnhConfig.solved;
+
+        if (!altitudeMet || !qnhRequirementMet)
+            return;
+
+        if (!endActivatedPages.Contains(config.pageIndex))
+        {
+            TriggerEndActivation(config);
+        }
+
+        if (!completedPages.Contains(config.pageIndex))
+        {
+            completedPages.Add(config.pageIndex);
+
+            if (config.autoUnlockNavigation)
+            {
+                PageNavigationController.RequestNavigationUnlock();
+            }
         }
     }
-}
 
     public PageTransitionConfig GetTransitionConfigForPage(int pageIndex)
     {
@@ -967,14 +929,14 @@ private void EvaluatePageCompletion(PageTransitionConfig config)
     {
         if (config == null)
         {
-            Debug.LogWarning("[A320PFD] QNH Configuration is null. Returning default target value.");
+            Debug.LogWarning("[AltimeterController] QNH Configuration is null. Returning default target value.");
             return defaultTargetQNH;
         }
 
         if (config.answerMode == QNHAnswerMode.DynamicRandom && config.generatedTargetQNH == 0f)
         {
             config.generatedTargetQNH = UnityEngine.Random.Range(minQNHRange, maxQNHRange + 1);
-            Debug.Log($"[A320PFD] Dynamically Generated QNH {config.generatedTargetQNH} for page index {config.pageIndex}");
+            Debug.Log($"[AltimeterController] Dynamically Generated QNH {config.generatedTargetQNH} for page index {config.pageIndex}");
         }
 
         float activeTargetValue = config.answerMode switch
@@ -1015,7 +977,7 @@ private void EvaluatePageCompletion(PageTransitionConfig config)
 
         if (config == null)
         {
-            Debug.LogWarning($"[A320PFD] Cannot regenerate QNH. No config found for Page {pageIndex}.");
+            Debug.LogWarning($"[AltimeterController] Cannot regenerate QNH. No config found for Page {pageIndex}.");
             return;
         }
 
@@ -1033,7 +995,7 @@ private void EvaluatePageCompletion(PageTransitionConfig config)
     }
 
     // ==================================================
-    // QNH Inputs & Validation
+    // QNH Inputs & Validation (Numpad Handling)
     // ==================================================
     public void OnQNHDigitPressed(string digit)
     {
@@ -1159,56 +1121,55 @@ private void EvaluatePageCompletion(PageTransitionConfig config)
         StartCoroutine(ValidateAndAdvanceQNHRoutine());
     }
 
-private IEnumerator ValidateAndAdvanceQNHRoutine()
-{
-    isValidatingQNH = true;
-    HideQNHFeedback();
-
-    PageQNHConfig current = CurrentQNHConfig;
-
-    if (ActiveQNHImage != null)
+    private IEnumerator ValidateAndAdvanceQNHRoutine()
     {
-        ActiveQNHImage.sprite = qnhCorrectSprite;
-        ActiveQNHImage.gameObject.SetActive(true);
-    }
+        isValidatingQNH = true;
+        HideQNHFeedback();
 
-    if (qnhAudioSource != null && qnhCorrectSound != null)
-    {
-        qnhAudioSource.PlayOneShot(qnhCorrectSound);
-    }
+        PageQNHConfig current = CurrentQNHConfig;
 
-    if (current != null)
-    {
-        current.solved = true;
-
-        if (current.inputField != null)
+        if (ActiveQNHImage != null)
         {
-            current.inputField.interactable = false;
+            ActiveQNHImage.sprite = qnhCorrectSprite;
+            ActiveQNHImage.gameObject.SetActive(true);
         }
 
-        EnableQNHFieldObjects(current, true);
-        current.onPageCorrectAnswer?.Invoke();
+        if (qnhAudioSource != null && qnhCorrectSound != null)
+        {
+            qnhAudioSource.PlayOneShot(qnhCorrectSound);
+        }
+
+        if (current != null)
+        {
+            current.solved = true;
+
+            if (current.inputField != null)
+            {
+                current.inputField.interactable = false;
+            }
+
+            EnableQNHFieldObjects(current, true);
+            current.onPageCorrectAnswer?.Invoke();
+        }
+
+        onQNHMatched?.Invoke();
+        wrongQNHAttempts = 0;
+
+        if (qnhAutoFillButton != null)
+        {
+            qnhAutoFillButton.gameObject.SetActive(false);
+        }
+
+        if (activeTransitionConfig != null)
+        {
+            EvaluatePageCompletion(activeTransitionConfig);
+        }
+
+        yield return null;
+        isValidatingQNH = false;
+
+        CheckNextQNHFieldOrAutoFill();
     }
-
-    onQNHMatched?.Invoke();
-    wrongQNHAttempts = 0;
-
-    if (qnhAutoFillButton != null)
-    {
-        qnhAutoFillButton.gameObject.SetActive(false);
-    }
-
-    // Re-evaluate page completion now that QNH status is updated to solved
-    if (activeTransitionConfig != null)
-    {
-        EvaluatePageCompletion(activeTransitionConfig);
-    }
-
-    yield return null;
-    isValidatingQNH = false;
-
-    CheckNextQNHFieldOrAutoFill();
-}
 
     private void CheckNextQNHFieldOrAutoFill()
     {
@@ -1456,7 +1417,7 @@ private IEnumerator ValidateAndAdvanceQNHRoutine()
     {
         if (minRange > maxRange)
         {
-            Debug.LogWarning("[A320PFD] Invalid QNH range. Minimum cannot be greater than maximum.");
+            Debug.LogWarning("[AltimeterController] Invalid QNH range. Minimum cannot be greater than maximum.");
             return;
         }
 
@@ -1470,13 +1431,13 @@ private IEnumerator ValidateAndAdvanceQNHRoutine()
     {
         if (Application.isPlaying)
         {
-            Debug.LogWarning("[A320PFD] Bake must be run in Edit Mode, not Play Mode.", this);
+            Debug.LogWarning("[AltimeterController] Bake must be run in Edit Mode, not Play Mode.", this);
             return;
         }
 
         if (isBaked)
         {
-            Debug.LogWarning("[A320PFD] Already baked.", this);
+            Debug.LogWarning("[AltimeterController] Already baked.", this);
             return;
         }
 
@@ -1492,7 +1453,7 @@ private IEnumerator ValidateAndAdvanceQNHRoutine()
         UnityEditor.EditorUtility.SetDirty(gameObject);
         UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(gameObject.scene);
 
-        Debug.Log("[A320PFD] Baked successfully.", this);
+        Debug.Log("[AltimeterController] Baked successfully.", this);
     }
 #endif
 
@@ -1528,7 +1489,7 @@ private IEnumerator ValidateAndAdvanceQNHRoutine()
         if (parentContainer != null)
             return;
 
-        GameObject canvasGO = new GameObject("A320PFD_Canvas");
+        GameObject canvasGO = new GameObject("AltimeterController_Canvas");
         RegisterCreatedObjectForUndo(canvasGO);
         canvas = canvasGO.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -2199,11 +2160,11 @@ private IEnumerator ValidateAndAdvanceQNHRoutine()
         bool pageFound = pageAltimeterSpeeds != null && pageAltimeterSpeeds.Exists(p => p.pageIndex == pageIndex);
         if (!pageFound)
         {
-            Debug.LogWarning($"[A320PFD] pagealtimeterspeedstart: No configuration found for Page {pageIndex} in Inspector!");
+            Debug.LogWarning($"[AltimeterController] pagealtimeterspeedstart: No configuration found for Page {pageIndex} in Inspector!");
         }
         else
         {
-            Debug.Log($"[A320PFD] Applied Altimeter Speed for Page {pageIndex}.");
+            Debug.Log($"[AltimeterController] Applied Altimeter Speed for Page {pageIndex}.");
         }
     }
 
@@ -2218,11 +2179,11 @@ private IEnumerator ValidateAndAdvanceQNHRoutine()
 
         if (activeTransitionConfig == null)
         {
-            Debug.LogWarning($"[A320PFD] transitionpageconfigstart: No Transition Page Config found for Page {pageIndex} in Inspector!");
+            Debug.LogWarning($"[AltimeterController] transitionpageconfigstart: No Transition Page Config found for Page {pageIndex} in Inspector!");
         }
         else
         {
-            Debug.Log($"[A320PFD] Applied Transition Config for Page {pageIndex}.");
+            Debug.Log($"[AltimeterController] Applied Transition Config for Page {pageIndex}.");
         }
     }
 }
