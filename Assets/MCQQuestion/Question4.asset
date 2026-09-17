@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d01fd2d64a9249049aaa77d5c12a82fe, type: 3}
+  m_Name: Question4
+  m_EditorClassIdentifier: Assembly-CSharp::MCQQuestionData
+  questionText: 4. When during the approach should the reported aerodrome altimeter
+    setting be set?
+  referenceImage: {fileID: 0}
+  explanationText: 
+  options:
+  - When passing 3000 ft AMSL or 1000 ft AGL
+  - When passing the transition level
+  - When passing the transition altitude
+  - Within the transition layer
+  correctOptionIndex: 1
