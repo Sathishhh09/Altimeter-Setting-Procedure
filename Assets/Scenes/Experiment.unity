@@ -136552,7 +136552,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SkyboxRotator
   skyboxMaterial: {fileID: 2100000, guid: a32ecd2fe59f0fe48ba2f7b86692a6d9, type: 2}
-  rotationSpeed: {x: 0, y: 0.8, z: 0}
+  rotationSpeed: {x: 0, y: 0, z: -0.8}
   clampX: 0
   clampY: 0
   clampZ: 0
