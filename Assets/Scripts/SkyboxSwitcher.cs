@@ -21,6 +21,8 @@ public class SkyboxSwitcher : MonoBehaviour
     [Tooltip("Map specific page indices to specific skybox materials.")]
     [SerializeField] private List<PageSkyboxMapping> pageSkyboxes = new();
 
+    private Material activeOverrideSkybox = null;
+
     private void OnEnable()
     {
         // Subscribe to page changes from PageNavigationController
@@ -39,13 +41,47 @@ public class SkyboxSwitcher : MonoBehaviour
         PageNavigationController.OnPageChanged -= HandlePageChanged;
     }
 
+    /// <summary>
+    /// Enables and applies a specific skybox material, overriding page mappings.
+    /// </summary>
+    /// <param name="customSkybox">The skybox material to apply.</param>
+    public void SetSkybox(Material customSkybox)
+    {
+        if (customSkybox == null)
+        {
+            Debug.LogWarning("[SkyboxSwitcher] Passed skybox material is null.");
+            return;
+        }
+
+        activeOverrideSkybox = customSkybox;
+        ApplyMaterial(activeOverrideSkybox);
+    }
+
+    /// <summary>
+    /// Disables the custom override skybox and restores the page-mapped or default skybox.
+    /// </summary>
+    public void ResetSkybox()
+    {
+        activeOverrideSkybox = null;
+        ApplySkyboxForPage(PageNavigationController.CurrentIndex);
+    }
+
     private void HandlePageChanged(int pageIndex)
     {
+        // If an override skybox is enabled, don't swap skyboxes on page navigation
+        if (activeOverrideSkybox != null) return;
+
         ApplySkyboxForPage(pageIndex);
     }
 
     private void ApplySkyboxForPage(int pageIndex)
     {
+        if (activeOverrideSkybox != null)
+        {
+            ApplyMaterial(activeOverrideSkybox);
+            return;
+        }
+
         Material targetMaterial = defaultSkybox;
 
         // Check if there is a specific material mapped to this page index
@@ -60,12 +96,17 @@ public class SkyboxSwitcher : MonoBehaviour
 
         if (targetMaterial != null)
         {
-            RenderSettings.skybox = targetMaterial;
-            DynamicGI.UpdateEnvironment(); // Force global illumination refresh
+            ApplyMaterial(targetMaterial);
         }
         else
         {
             Debug.LogWarning($"[SkyboxSwitcher] No skybox material assigned for page index {pageIndex} and no default material set.");
         }
+    }
+
+    private void ApplyMaterial(Material material)
+    {
+        RenderSettings.skybox = material;
+        DynamicGI.UpdateEnvironment(); // Force global illumination refresh
     }
 }

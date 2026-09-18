@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 2100000, guid: a32ecd2fe59f0fe48ba2f7b86692a6d9, type: 2}
+  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -6646,6 +6646,18 @@ MonoBehaviour:
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 1
+        m_CallState: 2
+      - m_Target: {fileID: 1673917261}
+        m_TargetAssemblyTypeName: SkyboxSwitcher, Assembly-CSharp
+        m_MethodName: SetSkybox
+        m_Mode: 2
+        m_Arguments:
+          m_ObjectArgument: {fileID: 2100000, guid: a32ecd2fe59f0fe48ba2f7b86692a6d9, type: 2}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Material, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: -0.5
           m_StringArgument: 
           m_BoolArgument: 1
         m_CallState: 2
@@ -239914,13 +239926,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SkyboxSwitcher
   defaultSkybox: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
   pageSkyboxes:
-  - pageIndex: 0
-    skyboxMaterial: {fileID: 2100000, guid: a32ecd2fe59f0fe48ba2f7b86692a6d9, type: 2}
   - pageIndex: 1
-    skyboxMaterial: {fileID: 2100000, guid: a32ecd2fe59f0fe48ba2f7b86692a6d9, type: 2}
-  - pageIndex: 2
-    skyboxMaterial: {fileID: 2100000, guid: a32ecd2fe59f0fe48ba2f7b86692a6d9, type: 2}
-  - pageIndex: 3
     skyboxMaterial: {fileID: 2100000, guid: a32ecd2fe59f0fe48ba2f7b86692a6d9, type: 2}
 --- !u!1 &1674393449
 GameObject:
