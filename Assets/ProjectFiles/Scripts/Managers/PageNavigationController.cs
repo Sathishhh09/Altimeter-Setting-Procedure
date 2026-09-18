@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 
@@ -47,6 +48,9 @@ public class PageNavigationController : MonoBehaviour
     // Runtime State
     private readonly HashSet<int> visitedPages = new();
     private readonly HashSet<int> completedPages = new();
+    
+    // Auto-advance Coroutine Tracker
+    private Coroutine autoAdvanceCoroutine;
 
     private int NavigationPageCount => Mathf.Max(1, requiresInteraction.Count);
 
@@ -79,6 +83,7 @@ public class PageNavigationController : MonoBehaviour
     private void OnDisable()
     {
         OnNavigationUnlockRequested -= EnableNavigationButtons;
+        StopAutoAdvanceTimer();
     }
 
     private void OnDestroy()
@@ -95,6 +100,8 @@ public class PageNavigationController : MonoBehaviour
 
     public void NextPage()
     {
+        StopAutoAdvanceTimer();
+
         if (currentIndex >= NavigationPageCount - 1)
             return;
 
@@ -109,6 +116,8 @@ public class PageNavigationController : MonoBehaviour
 
     public void PreviousPage()
     {
+        StopAutoAdvanceTimer();
+
         if (currentIndex <= 0)
             return;
 
@@ -224,5 +233,50 @@ public class PageNavigationController : MonoBehaviour
     public bool IsPageCompleted(int pageIndex)
     {
         return completedPages.Contains(pageIndex);
+    }
+
+    /// <summary>
+    /// Increments the current page index by 1 and starts a 5-second timer to automatically advance to the next page.
+    /// </summary>
+    public void IncreasePageIndex()
+    {
+        StartAutoAdvanceTimer(5f);
+        // int targetIndex = Mathf.Clamp(currentIndex + 1, 0, NavigationPageCount - 1);
+
+        // // If index doesn't change, no update needed
+        // if (targetIndex == currentIndex)
+        //     return;
+
+        // currentIndex = targetIndex;
+        // visitedPages.Add(currentIndex);
+
+        // UpdateButtons();
+        // UpdateDisplay();
+        // RaisePageChanged();
+
+        // // Start 5-second auto-advance timer
+        // StartAutoAdvanceTimer(5f);
+    }
+
+    private void StartAutoAdvanceTimer(float delay)
+    {
+        StopAutoAdvanceTimer();
+        autoAdvanceCoroutine = StartCoroutine(AutoAdvanceRoutine(delay));
+    }
+
+    private void StopAutoAdvanceTimer()
+    {
+        if (autoAdvanceCoroutine != null)
+        {
+            StopCoroutine(autoAdvanceCoroutine);
+            autoAdvanceCoroutine = null;
+        }
+    }
+
+    private IEnumerator AutoAdvanceRoutine(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        autoAdvanceCoroutine = null;
+        NextPage();
     }
 }
