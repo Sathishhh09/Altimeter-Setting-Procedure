@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-[RequireComponent(typeof(AudioSource))]
 public class CautionUI : MonoBehaviour
 {
     [Header("Panel Settings")]
