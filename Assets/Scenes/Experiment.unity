@@ -6673,6 +6673,18 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 1
         m_CallState: 2
+      - m_Target: {fileID: 944754791}
+        m_TargetAssemblyTypeName: SkyboxRotator, Assembly-CSharp
+        m_MethodName: StartRotationZ
+        m_Mode: 4
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: -0.5
+          m_StringArgument: 
+          m_BoolArgument: 1
+        m_CallState: 2
 --- !u!1 &50076801
 GameObject:
   m_ObjectHideFlags: 0
@@ -8088,9 +8100,9 @@ MonoBehaviour:
     feedbackImage: {fileID: 1216541756}
     objectsToEnable: []
     correctAnswer: 0
-    minCorrectRange: 0
-    maxCorrectRange: 0
-    exceptValue: 0
+    minCorrectRange: 1001
+    maxCorrectRange: 1025
+    exceptValue: 1013
     isAutoFillField: 0
     autoFillDelay: 0
     onPageCorrectAnswer:
@@ -8299,6 +8311,18 @@ MonoBehaviour:
           m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
           m_MethodName: SetActive
           m_Mode: 6
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+        - m_Target: {fileID: 944754791}
+          m_TargetAssemblyTypeName: SkyboxRotator, Assembly-CSharp
+          m_MethodName: StopRotationZ
+          m_Mode: 1
           m_Arguments:
             m_ObjectArgument: {fileID: 0}
             m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -8547,6 +8571,18 @@ MonoBehaviour:
         - m_Target: {fileID: 2051290529}
           m_TargetAssemblyTypeName: PageNavigationController, Assembly-CSharp
           m_MethodName: EnableNavigationButtons
+          m_Mode: 1
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+        - m_Target: {fileID: 944754791}
+          m_TargetAssemblyTypeName: SkyboxRotator, Assembly-CSharp
+          m_MethodName: StopRotationZ
           m_Mode: 1
           m_Arguments:
             m_ObjectArgument: {fileID: 0}
@@ -136552,12 +136588,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SkyboxRotator
   skyboxMaterial: {fileID: 2100000, guid: a32ecd2fe59f0fe48ba2f7b86692a6d9, type: 2}
-  rotationSpeed: {x: 0, y: 0, z: -0.8}
+  rotationSpeed: {x: 0, y: 0, z: 0}
   clampX: 0
   clampY: 0
   clampZ: 0
-  minRotation: {x: 0, y: 0, z: 0}
-  maxRotation: {x: 0, y: 0, z: 0}
+  minRotation: {x: -45, y: 0, z: -45}
+  maxRotation: {x: 45, y: 360, z: 45}
+  isRotatingX: 0
+  isRotatingY: 0
+  isRotatingZ: 0
+  isOscillatingX: 0
+  isOscillatingY: 0
+  isOscillatingZ: 0
 --- !u!1 &945178040
 GameObject:
   m_ObjectHideFlags: 0
@@ -238768,6 +238810,37 @@ MonoBehaviour:
             m_StringArgument: 
             m_BoolArgument: 0
           m_CallState: 2
+  - pageIndex: 1
+    onPageEntered:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 944754791}
+          m_TargetAssemblyTypeName: SkyboxRotator, Assembly-CSharp
+          m_MethodName: ResetRotationZ
+          m_Mode: 1
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+        - m_Target: {fileID: 944754791}
+          m_TargetAssemblyTypeName: SkyboxRotator, Assembly-CSharp
+          m_MethodName: RotateToAngleZ
+          m_Mode: 4
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 10
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+    onPageExited:
+      m_PersistentCalls:
+        m_Calls: []
   - pageIndex: 2
     onPageEntered:
       m_PersistentCalls:
@@ -396725,6 +396798,30 @@ MonoBehaviour:
         m_Arguments:
           m_ObjectArgument: {fileID: 332114413}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Transform, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 944754791}
+        m_TargetAssemblyTypeName: SkyboxRotator, Assembly-CSharp
+        m_MethodName: StopRotationZ
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 944754791}
+        m_TargetAssemblyTypeName: SkyboxRotator, Assembly-CSharp
+        m_MethodName: ResetAllRotations
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
