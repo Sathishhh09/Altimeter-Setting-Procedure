@@ -1,70 +1,131 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
 public class FlightLevelHandler : MonoBehaviour
 {
-    [Header("UI Reference")]
-    [SerializeField] private TextMeshProUGUI levelText;
-
-    [Header("Values")]
-    [SerializeField] private float startValue = 0f;
-    [SerializeField] private float endValue = 100f;
-    [SerializeField] private float speed = 10f;
-
-    private float currentValue;
-    private bool isCounting = false;
-
-    void Start()
+    public enum CountDirection
     {
-        // Set initial text display on game start
-        currentValue = startValue;
-        UpdateText();
+        Increase,
+        Decrease
     }
 
-    void Update()
+    [System.Serializable]
+    public class TextCounterSetting
     {
-        if (!isCounting) return;
+        [Header("UI Reference")]
+        public TextMeshProUGUI levelText;
 
-        if (currentValue < endValue)
+        [Header("Value Bounds")]
+        public float startValue = 1000f;
+        public float targetValue = 1240f;
+
+        [Header("Formatting")]
+        public string prefix = "";
+        public string suffix = " FT";
+
+        [Header("Settings")]
+        public float speed = 10f;
+        public CountDirection direction = CountDirection.Increase;
+
+        [HideInInspector] public float currentValue;
+        [HideInInspector] public bool isCounting = false;
+    }
+
+    [Header("Counters Configuration")]
+    [SerializeField] private List<TextCounterSetting> counters = new List<TextCounterSetting>();
+
+    private void Start()
+    {
+        // Set initial values on start based on settings
+        foreach (var counter in counters)
         {
-            currentValue += speed * Time.deltaTime;
-            currentValue = Mathf.Min(currentValue, endValue);
-            UpdateText();
+            counter.currentValue = counter.startValue;
+            UpdateCounterText(counter);
+            counter.isCounting = true;
         }
-        else
+    }
+
+    private void Update()
+    {
+        foreach (var counter in counters)
         {
-            // Stop updates once target is reached
-            isCounting = false;
+            if (!counter.isCounting) continue;
+
+            if (counter.direction == CountDirection.Increase)
+            {
+                if (counter.currentValue < counter.targetValue)
+                {
+                    counter.currentValue += counter.speed * Time.deltaTime;
+                    counter.currentValue = Mathf.Min(counter.currentValue, counter.targetValue);
+                    UpdateCounterText(counter);
+
+                    if (counter.currentValue >= counter.targetValue)
+                    {
+                        counter.isCounting = false;
+                    }
+                }
+                else
+                {
+                    counter.isCounting = false;
+                }
+            }
+            else // Decrease
+            {
+                if (counter.currentValue > counter.targetValue)
+                {
+                    counter.currentValue -= counter.speed * Time.deltaTime;
+                    counter.currentValue = Mathf.Max(counter.currentValue, counter.targetValue);
+                    UpdateCounterText(counter);
+
+                    if (counter.currentValue <= counter.targetValue)
+                    {
+                        counter.isCounting = false;
+                    }
+                }
+                else
+                {
+                    counter.isCounting = false;
+                }
+            }
         }
     }
 
     /// <summary>
-    /// Call this method from a UI Button OnClick event, UnityEvent, or another script.
+    /// Starts counting on all configured text elements.
+    /// Call this from a UI Button OnClick event or UnityEvent.
     /// </summary>
     public void StartCounting()
     {
-        currentValue = startValue;
-        UpdateText();
-        isCounting = true;
+        foreach (var counter in counters)
+        {
+            counter.currentValue = counter.startValue;
+            UpdateCounterText(counter);
+            counter.isCounting = true;
+        }
     }
 
     /// <summary>
-    /// Optional: Call this if you want to trigger counting with new values dynamically from another script.
+    /// Starts counting for a single specific counter by list index.
     /// </summary>
-    public void StartCountingCustom(float newStart, float newEnd, float newSpeed)
+    public void StartCountingIndex(int index)
     {
-        startValue = newStart;
-        endValue = newEnd;
-        speed = newSpeed;
-        
-        StartCounting();
+        if (index >= 0 && index < counters.Count)
+        {
+            var counter = counters[index];
+            counter.currentValue = counter.startValue;
+            UpdateCounterText(counter);
+            counter.isCounting = true;
+        }
     }
 
-    private void UpdateText()
+    private void UpdateCounterText(TextCounterSetting counter)
     {
-        if (levelText != null)
+        if (counter.levelText != null)
         {
-            levelText.text = Mathf.RoundToInt(currentValue).ToString();
+            counter.levelText.text = $"{counter.prefix}{Mathf.RoundToInt(counter.currentValue)}{counter.suffix}";
         }
     }
 }
