@@ -68,6 +68,22 @@ public class A320PFD : MonoBehaviour
         [Tooltip("Page index where this configuration applies.")]
         public int pageIndex;
 
+        [Header("Altitude Gate Settings")]
+        [Tooltip("If true, validation is locked until the current altitude reaches 'correctAltitude'.")]
+        public bool allow = false;
+
+        [Tooltip("Target altitude that must be reached before answer checking is allowed.")]
+        public float correctAltitude;
+
+        [Tooltip("GameObject to enable for 4 seconds if input is entered during transition before reaching correct altitude.")]
+        public GameObject transitionalObject;
+
+        [Tooltip("Event triggered automatically when current altitude reaches correctAltitude.")]
+        public UnityEvent onAltitudeReached;
+
+        [HideInInspector]
+        public bool altitudeReachedTriggered = false;
+
         [Header("Answer Selection Strategy")]
         [Tooltip("Choose how the correct answer/target QNH for this page is determined.")]
         public QNHAnswerMode answerMode = QNHAnswerMode.DynamicRandom;
@@ -118,6 +134,9 @@ public class A320PFD : MonoBehaviour
 
         [HideInInspector]
         public float currentEnteredValue;
+
+        [HideInInspector]
+        public Coroutine transitionalRoutine;
     }
 
     // ==================================================
@@ -582,6 +601,7 @@ public class A320PFD : MonoBehaviour
 
                     config.solved = false;
                     config.currentEnteredValue = 0f;
+                    config.altitudeReachedTriggered = false;
                     EnableQNHFieldObjects(config, false);
                 }
             }
@@ -656,6 +676,28 @@ public class A320PFD : MonoBehaviour
             CheckCautionLimit(activeTransitionConfig);
             CheckEndTransitionLimit(activeTransitionConfig);
             EvaluatePageCompletion(activeTransitionConfig);
+        }
+
+        CheckPageAltitudeGate();
+    }
+
+    private void CheckPageAltitudeGate()
+    {
+        PageQNHConfig currentConfig = CurrentQNHConfig;
+        if (currentConfig != null && currentConfig.allow && !currentConfig.altitudeReachedTriggered)
+        {
+            bool hasReached = altimeterDirection switch
+            {
+                AltitudeChangeDirection.Decrease => altitude <= currentConfig.correctAltitude,
+                _ => altitude >= currentConfig.correctAltitude
+            };
+
+            if (hasReached)
+            {
+                currentConfig.altitudeReachedTriggered = true;
+                currentConfig.onAltitudeReached?.Invoke();
+                Debug.Log($"[AltimeterController] Current altitude ({altitude:F0}) reached target altitude ({currentConfig.correctAltitude:F0}) for Page {currentConfig.pageIndex}. Triggered event.");
+            }
         }
     }
 
@@ -1079,6 +1121,32 @@ public class A320PFD : MonoBehaviour
         if (qnhSolved || isValidatingQNH || CurrentQNHConfig == null) return;
 
         PageQNHConfig current = CurrentQNHConfig;
+
+        // Check if altitude restriction is active
+        if (current.allow)
+        {
+            bool altitudeReached = altimeterDirection switch
+            {
+                AltitudeChangeDirection.Decrease => altitude <= current.correctAltitude,
+                _ => altitude >= current.correctAltitude
+            };
+
+            if (!altitudeReached)
+            {
+                if (current.transitionalObject != null)
+                {
+                    if (current.transitionalRoutine != null)
+                    {
+                        StopCoroutine(current.transitionalRoutine);
+                    }
+                    current.transitionalRoutine = StartCoroutine(EnableTransitionalObjectRoutine(current.transitionalObject));
+                }
+
+                Debug.LogWarning($"[AltimeterController] Cannot check answer. Current altitude ({altitude:F0}) has not reached target altitude ({current.correctAltitude:F0}).");
+                return;
+            }
+        }
+
         bool isCorrect = false;
 
         if (current.answerMode == QNHAnswerMode.RangeAnswer)
@@ -1119,6 +1187,13 @@ public class A320PFD : MonoBehaviour
         }
 
         StartCoroutine(ValidateAndAdvanceQNHRoutine());
+    }
+
+    private IEnumerator EnableTransitionalObjectRoutine(GameObject obj)
+    {
+        obj.SetActive(true);
+        yield return new WaitForSeconds(4f);
+        obj.SetActive(false);
     }
 
     private IEnumerator ValidateAndAdvanceQNHRoutine()
@@ -1385,6 +1460,7 @@ public class A320PFD : MonoBehaviour
         {
             config.solved = false;
             config.currentEnteredValue = 0f;
+            config.altitudeReachedTriggered = false;
 
             if (config.answerMode == QNHAnswerMode.DynamicRandom)
             {
