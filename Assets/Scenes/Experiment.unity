@@ -8460,6 +8460,7 @@ MonoBehaviour:
     allow: 0
     correctAltitude: 0
     transitionalObject: {fileID: 0}
+    transitionalAudio: {fileID: 0}
     onAltitudeReached:
       m_PersistentCalls:
         m_Calls: []
@@ -8570,6 +8571,7 @@ MonoBehaviour:
     allow: 1
     correctAltitude: 3500
     transitionalObject: {fileID: 95755008}
+    transitionalAudio: {fileID: 8300000, guid: 03d80186111aa2a4b9f1b8ae7f86221d, type: 3}
     onAltitudeReached:
       m_PersistentCalls:
         m_Calls: []
@@ -8740,6 +8742,7 @@ MonoBehaviour:
     allow: 0
     correctAltitude: 0
     transitionalObject: {fileID: 0}
+    transitionalAudio: {fileID: 0}
     onAltitudeReached:
       m_PersistentCalls:
         m_Calls: []
@@ -8850,6 +8853,7 @@ MonoBehaviour:
     allow: 0
     correctAltitude: 0
     transitionalObject: {fileID: 0}
+    transitionalAudio: {fileID: 0}
     onAltitudeReached:
       m_PersistentCalls:
         m_Calls: []
@@ -8960,6 +8964,7 @@ MonoBehaviour:
     allow: 0
     correctAltitude: 0
     transitionalObject: {fileID: 0}
+    transitionalAudio: {fileID: 0}
     onAltitudeReached:
       m_PersistentCalls:
         m_Calls: []
@@ -9022,6 +9027,7 @@ MonoBehaviour:
     allow: 1
     correctAltitude: 6000
     transitionalObject: {fileID: 2009503711}
+    transitionalAudio: {fileID: 8300000, guid: 03d80186111aa2a4b9f1b8ae7f86221d, type: 3}
     onAltitudeReached:
       m_PersistentCalls:
         m_Calls: []

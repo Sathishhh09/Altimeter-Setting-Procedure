@@ -78,6 +78,9 @@ public class A320PFD : MonoBehaviour
         [Tooltip("GameObject to enable for 4 seconds if input is entered during transition before reaching correct altitude.")]
         public GameObject transitionalObject;
 
+        [Tooltip("Audio clip to play when the transitional object is enabled.")]
+        public AudioClip transitionalAudio;
+
         [Tooltip("Event triggered automatically when current altitude reaches correctAltitude.")]
         public UnityEvent onAltitudeReached;
 
@@ -1139,7 +1142,7 @@ public class A320PFD : MonoBehaviour
                     {
                         StopCoroutine(current.transitionalRoutine);
                     }
-                    current.transitionalRoutine = StartCoroutine(EnableTransitionalObjectRoutine(current.transitionalObject));
+                    current.transitionalRoutine = StartCoroutine(EnableTransitionalObjectRoutine(current));
                 }
 
                 Debug.LogWarning($"[AltimeterController] Cannot check answer. Current altitude ({altitude:F0}) has not reached target altitude ({current.correctAltitude:F0}).");
@@ -1189,11 +1192,17 @@ public class A320PFD : MonoBehaviour
         StartCoroutine(ValidateAndAdvanceQNHRoutine());
     }
 
-    private IEnumerator EnableTransitionalObjectRoutine(GameObject obj)
+    private IEnumerator EnableTransitionalObjectRoutine(PageQNHConfig config)
     {
-        obj.SetActive(true);
+        config.transitionalObject.SetActive(true);
+
+        if (qnhAudioSource != null && config.transitionalAudio != null)
+        {
+            qnhAudioSource.PlayOneShot(config.transitionalAudio);
+        }
+
         yield return new WaitForSeconds(4f);
-        obj.SetActive(false);
+        config.transitionalObject.SetActive(false);
     }
 
     private IEnumerator ValidateAndAdvanceQNHRoutine()
