@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events; // Required for UnityEvent
 using TMPro;
 
 public class FlightLevelHandler : MonoBehaviour
@@ -30,6 +31,10 @@ public class FlightLevelHandler : MonoBehaviour
         public float speed = 10f;
         public CountDirection direction = CountDirection.Increase;
 
+        [Header("Events")]
+        [Tooltip("Triggered when this specific counter reaches its target value.")]
+        public UnityEvent onTargetReached;
+
         [HideInInspector] public float currentValue;
         [HideInInspector] public bool isCounting = false;
     }
@@ -37,65 +42,85 @@ public class FlightLevelHandler : MonoBehaviour
     [Header("Counters Configuration")]
     [SerializeField] private List<TextCounterSetting> counters = new List<TextCounterSetting>();
 
+    [Header("Global Events")]
+    [Tooltip("Triggered when ALL active counters have finished reaching their targets.")]
+    public UnityEvent onAllTargetsReached;
+
     private void Start()
     {
         // Set initial values on start based on settings
-        foreach (var counter in counters)
-        {
-            counter.currentValue = counter.startValue;
-            UpdateCounterText(counter);
-            counter.isCounting = true;
-        }
+        StartCounting();
     }
 
     private void Update()
     {
+        bool anyCounterActive = false;
+
         foreach (var counter in counters)
         {
             if (!counter.isCounting) continue;
 
+            anyCounterActive = true;
+
             if (counter.direction == CountDirection.Increase)
             {
-                if (counter.currentValue < counter.targetValue)
+                counter.currentValue += counter.speed * Time.deltaTime;
+                
+                if (counter.currentValue >= counter.targetValue)
                 {
-                    counter.currentValue += counter.speed * Time.deltaTime;
-                    counter.currentValue = Mathf.Min(counter.currentValue, counter.targetValue);
-                    UpdateCounterText(counter);
-
-                    if (counter.currentValue >= counter.targetValue)
-                    {
-                        counter.isCounting = false;
-                    }
+                    CompleteCounter(counter);
                 }
                 else
                 {
-                    counter.isCounting = false;
+                    UpdateCounterText(counter);
                 }
             }
             else // Decrease
             {
-                if (counter.currentValue > counter.targetValue)
-                {
-                    counter.currentValue -= counter.speed * Time.deltaTime;
-                    counter.currentValue = Mathf.Max(counter.currentValue, counter.targetValue);
-                    UpdateCounterText(counter);
+                counter.currentValue -= counter.speed * Time.deltaTime;
 
-                    if (counter.currentValue <= counter.targetValue)
-                    {
-                        counter.isCounting = false;
-                    }
+                if (counter.currentValue <= counter.targetValue)
+                {
+                    CompleteCounter(counter);
                 }
                 else
                 {
-                    counter.isCounting = false;
+                    UpdateCounterText(counter);
                 }
             }
+        }
+
+        // Check if all counters just finished during this frame
+        if (anyCounterActive && CheckIfAllCompleted())
+        {
+            onAllTargetsReached?.Invoke();
         }
     }
 
     /// <summary>
+    /// Helper method to finalize counter value, update UI, and invoke its individual event.
+    /// </summary>
+    private void CompleteCounter(TextCounterSetting counter)
+    {
+        counter.currentValue = counter.targetValue;
+        counter.isCounting = false;
+        UpdateCounterText(counter);
+        
+        // Trigger individual event
+        counter.onTargetReached?.Invoke();
+    }
+
+    private bool CheckIfAllCompleted()
+    {
+        foreach (var counter in counters)
+        {
+            if (counter.isCounting) return false;
+        }
+        return true;
+    }
+
+    /// <summary>
     /// Starts counting on all configured text elements.
-    /// Call this from a UI Button OnClick event or UnityEvent.
     /// </summary>
     public void StartCounting()
     {
