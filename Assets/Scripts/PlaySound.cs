@@ -11,8 +11,13 @@ public class PlaySound : MonoBehaviour
     [Header("Events")]
     public UnityEvent onSoundFinished;
 
+    private bool hasPlayed = false;
+
     private void Start()
     {
+        // Prevent playing more than once
+        if (hasPlayed) return;
+
         // Verify both references exist before playing
         if (audioSource == null)
         {
@@ -26,6 +31,7 @@ public class PlaySound : MonoBehaviour
             return;
         }
 
+        hasPlayed = true;
         StartCoroutine(PlayAudioAndTriggerEvent());
     }
 
