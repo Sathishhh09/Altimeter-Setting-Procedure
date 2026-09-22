@@ -841,26 +841,20 @@ public class A320PFD : MonoBehaviour
         OnCautionObjectsActivated?.Invoke(config.pageIndex);
     }
 
-    private void CheckEndTransitionLimit(PageTransitionConfig config)
-    {
-        if (endActivatedPages.Contains(config.pageIndex))
-            return;
+private void CheckEndTransitionLimit(PageTransitionConfig config)
+{
+    if (endActivatedPages.Contains(config.pageIndex))
+        return;
 
-        bool altitudeMet = config.IsAscending
-            ? altitude >= config.endTransitionLayerLimit
-            : altitude <= config.endTransitionLayerLimit;
+    bool altitudeMet = config.IsAscending
+        ? altitude >= (config.endTransitionLayerLimit - 0.1f)
+        : altitude <= (config.endTransitionLayerLimit + 0.1f);
 
-        if (!altitudeMet)
-            return;
+    if (!altitudeMet)
+        return;
 
-        PageQNHConfig qnhConfig = qnhPageConfigurations.Find(c => c.pageIndex == config.pageIndex);
-        bool qnhRequirementMet = qnhConfig == null || qnhConfig.solved;
-
-        if (!qnhRequirementMet)
-            return;
-
-        TriggerEndActivation(config);
-    }
+    TriggerEndActivation(config);
+}
 
     public void TriggerEndActivation(PageTransitionConfig config)
     {
@@ -880,11 +874,11 @@ public class A320PFD : MonoBehaviour
         PageQNHConfig qnhConfig = qnhPageConfigurations.Find(c => c.pageIndex == config.pageIndex);
         bool qnhSolvedForPage = qnhConfig == null || qnhConfig.solved;
 
-        if (!qnhSolvedForPage)
-        {
-            Debug.Log($"[AltimeterController] End activation blocked. QNH for page {config.pageIndex} is NOT solved.");
-            return;
-        }
+        // if (!qnhSolvedForPage)
+        // {
+        //     Debug.Log($"[AltimeterController] End activation blocked. QNH for page {config.pageIndex} is NOT solved.");
+        //     return;
+        // }
 
         if (endActivatedPages.Contains(config.pageIndex))
             return;
@@ -1912,26 +1906,32 @@ public class A320PFD : MonoBehaviour
     // ==================================================
     // Internal Updates
     // ==================================================
-    private void UpdateAltitudeFromSpeed()
-    {
-        if (!isAltimeterActive) return;
+private void UpdateAltitudeFromSpeed()
+{
+    if (!isAltimeterActive) return;
 
-        switch (altimeterDirection)
-        {
-            case AltitudeChangeDirection.Increase:
-                altitude += Mathf.Abs(altimeterSpeed) * Time.deltaTime;
-                if (currentMaxAltitude.HasValue && altitude > currentMaxAltitude.Value)
-                {
-                    altitude = currentMaxAltitude.Value;
-                }
-                break;
-            case AltitudeChangeDirection.Decrease:
-                altitude -= Mathf.Abs(altimeterSpeed) * Time.deltaTime;
-                break;
-            case AltitudeChangeDirection.Maintain:
-                break;
-        }
+    switch (altimeterDirection)
+    {
+        case AltitudeChangeDirection.Increase:
+            altitude += Mathf.Abs(altimeterSpeed) * Time.deltaTime;
+            if (currentMaxAltitude.HasValue && altitude > currentMaxAltitude.Value)
+            {
+                altitude = currentMaxAltitude.Value;
+            }
+            break;
+
+        case AltitudeChangeDirection.Decrease:
+            altitude -= Mathf.Abs(altimeterSpeed) * Time.deltaTime;
+            if (currentMaxAltitude.HasValue && altitude < currentMaxAltitude.Value)
+            {
+                altitude = currentMaxAltitude.Value;
+            }
+            break;
+
+        case AltitudeChangeDirection.Maintain:
+            break;
     }
+}
 
     private void UpdateRoll()
     {
