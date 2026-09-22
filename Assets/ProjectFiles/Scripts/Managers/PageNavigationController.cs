@@ -279,4 +279,37 @@ public class PageNavigationController : MonoBehaviour
         autoAdvanceCoroutine = null;
         NextPage();
     }
+
+
+
+
+public void GoToPage(int pageIndex)
+{
+    StopAutoAdvanceTimer();
+
+    // Clamp the target index within valid bounds
+    int targetIndex = Mathf.Clamp(pageIndex, 0, NavigationPageCount - 1);
+
+    // RESTART LOGIC: If triggering the same page index, reset state for this page
+    if (currentIndex == targetIndex)
+    {
+        // Remove completion status so page locks/interaction requirements re-apply if necessary
+        completedPages.Remove(currentIndex);
+
+        // Re-apply button state, UI text, and fire OnPageChanged to signal a page reset
+        UpdateButtons();
+        UpdateDisplay();
+        RaisePageChanged();
+        return;
+    }
+
+    // NORMAL NAVIGATION LOGIC: Move to new target page
+    currentIndex = targetIndex;
+    visitedPages.Add(currentIndex);
+
+    UpdateButtons();
+    UpdateDisplay();
+    RaisePageChanged();
+}
+
 }
