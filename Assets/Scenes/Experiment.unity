@@ -31840,13 +31840,17 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 3267942801459900399, guid: 112520aae480a0244903063ffbb5b11a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5495250973920756623, guid: 112520aae480a0244903063ffbb5b11a, type: 3}
       propertyPath: m_Name
       value: airport
       objectReference: {fileID: 0}
     - target: {fileID: 5495250973920756623, guid: 112520aae480a0244903063ffbb5b11a, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7156953697861999438, guid: 112520aae480a0244903063ffbb5b11a, type: 3}
       propertyPath: m_LocalPosition.x
@@ -142097,7 +142101,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &929494172
 Transform:
   m_ObjectHideFlags: 0
@@ -177342,6 +177346,26 @@ PrefabInstance:
     - target: {fileID: 2195035310991186494, guid: e12282d9cb1d0c44fa7b13d62d6755b2, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3439115335385795609, guid: e12282d9cb1d0c44fa7b13d62d6755b2, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3439115335385795609, guid: e12282d9cb1d0c44fa7b13d62d6755b2, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 690139711}
+    - target: {fileID: 3439115335385795609, guid: e12282d9cb1d0c44fa7b13d62d6755b2, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: LoadScene
+      objectReference: {fileID: 0}
+    - target: {fileID: 3439115335385795609, guid: e12282d9cb1d0c44fa7b13d62d6755b2, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: SceneManager, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 3439115335385795609, guid: e12282d9cb1d0c44fa7b13d62d6755b2, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_StringArgument
+      value: Experiment
       objectReference: {fileID: 0}
     - target: {fileID: 3672694147007504999, guid: e12282d9cb1d0c44fa7b13d62d6755b2, type: 3}
       propertyPath: m_IsActive
@@ -297968,7 +297992,7 @@ AudioSource:
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
   m_PlayOnAwake: 1
-  m_Volume: 0.8
+  m_Volume: 0.5
   m_Pitch: 1
   Loop: 0
   Mute: 0
