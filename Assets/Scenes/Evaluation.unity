@@ -24113,7 +24113,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5495250973920756623, guid: 112520aae480a0244903063ffbb5b11a, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7156953697861999438, guid: 112520aae480a0244903063ffbb5b11a, type: 3}
       propertyPath: m_LocalPosition.x
@@ -31822,6 +31822,11 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 282530616}
   m_Mesh: {fileID: 5912420101274308501, guid: 69acb39daa3350048bf1643e74b32195, type: 3}
+--- !u!1 &282634963 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5495250973920756623, guid: 112520aae480a0244903063ffbb5b11a, type: 3}
+  m_PrefabInstance: {fileID: 206553700}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &283279533
 GameObject:
   m_ObjectHideFlags: 0
@@ -32676,6 +32681,34 @@ PrefabInstance:
       propertyPath: questionData
       value: 
       objectReference: {fileID: 11400000, guid: ccd54481aba49714881821694ac7952f, type: 2}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 2051290529}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: EnableNavigationButtons
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: PageNavigationController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -69378,6 +69411,34 @@ PrefabInstance:
       propertyPath: questionData
       value: 
       objectReference: {fileID: 11400000, guid: ac4b8bbfbebea544fb82946e87f84e6d, type: 2}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 2051290529}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: EnableNavigationButtons
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: PageNavigationController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -79459,6 +79520,10 @@ MonoBehaviour:
       stayInUpcomingPages: 0
       enableOnce: 0
       hasBeenEnabledOnce: 0
+    - panel: {fileID: 282634963}
+      stayInUpcomingPages: 1
+      enableOnce: 0
+      hasBeenEnabledOnce: 0
   - pageName: Page 2
     pageText: 
     showDialogBox: 0
@@ -85590,6 +85655,34 @@ PrefabInstance:
       propertyPath: questionData
       value: 
       objectReference: {fileID: 11400000, guid: a8f51f49c8d4fad468a9c4dc2cb6a8a3, type: 2}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 2051290529}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: EnableNavigationButtons
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: PageNavigationController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -93972,6 +94065,34 @@ PrefabInstance:
       propertyPath: questionData
       value: 
       objectReference: {fileID: 11400000, guid: 7ebdf9d9ff664d74e877c6f6ede4956a, type: 2}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 2051290529}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: EnableNavigationButtons
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: PageNavigationController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -100281,6 +100402,34 @@ PrefabInstance:
       propertyPath: questionData
       value: 
       objectReference: {fileID: 11400000, guid: a68fcee331eeef243a4f58163ca1ecd8, type: 2}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 2051290529}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: EnableNavigationButtons
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: PageNavigationController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -112666,6 +112815,34 @@ PrefabInstance:
       propertyPath: questionData
       value: 
       objectReference: {fileID: 11400000, guid: fbafe5246894900419531a90491938d4, type: 2}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 2051290529}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: EnableNavigationButtons
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: PageNavigationController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -124652,6 +124829,34 @@ PrefabInstance:
       propertyPath: questionData
       value: 
       objectReference: {fileID: 11400000, guid: 9a2a381c1f3a1db4e9069cea656a4316, type: 2}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 2051290529}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: EnableNavigationButtons
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: PageNavigationController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -183433,6 +183638,34 @@ PrefabInstance:
       propertyPath: audioSource
       value: 
       objectReference: {fileID: 1991077094}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 2051290529}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: EnableNavigationButtons
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: PageNavigationController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -190109,6 +190342,34 @@ PrefabInstance:
       propertyPath: questionData
       value: 
       objectReference: {fileID: 11400000, guid: 5d7c1e2a862d9ea47879d919fd74d025, type: 2}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 2051290529}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: EnableNavigationButtons
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: PageNavigationController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -242332,8 +242593,8 @@ MonoBehaviour:
   previousButton: {fileID: 2047601129}
   pageNumberText: {fileID: 1553864831}
   developerIndexMode: 0
-  testing: 1
-  requiresInteraction: 00000000000000000000
+  testing: 0
+  requiresInteraction: 01010101010101010101
   lockNavigationTillUnlocked: 
   currentIndex: 0
 --- !u!1 &2053560375
@@ -250209,6 +250470,34 @@ PrefabInstance:
       propertyPath: questionData
       value: 
       objectReference: {fileID: 11400000, guid: e6f5f61987a72a64a8863fc0e9693bde, type: 2}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 2051290529}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: EnableNavigationButtons
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: PageNavigationController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 7565322836361030555, guid: 8dab8250160f84d458b38f8759cf4a71, type: 3}
+      propertyPath: Nextpage.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
