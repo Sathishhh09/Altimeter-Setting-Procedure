@@ -15,7 +15,9 @@ MonoBehaviour:
   questionText: 10. Whilst flying through the transition layer the vertical position
     of the aircraft should be reported as
   referenceImage: {fileID: 0}
-  explanationText: 
+  explanationText: The transition layer contains both reference systems during transition.
+    The aircraft's reported vertical position depends on whether standard pressure
+    or the local QNH setting is being used.
   options:
   - Altitude
   - Height

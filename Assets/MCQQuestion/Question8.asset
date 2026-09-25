@@ -14,7 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MCQQuestionData
   questionText: 8. Transition from altitude to flight level, and vice-versa, is done
   referenceImage: {fileID: 0}
-  explanationText: 
+  explanationText: During climb, aircraft change from altitude to flight level at
+    the transition altitude. During descent, they change from flight level to altitude
+    at the transition level.
   options:
   - at transition level during the climbs and at transition altitude in the descent
   - only at transition altitude

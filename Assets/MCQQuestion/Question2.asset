@@ -14,7 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MCQQuestionData
   questionText: '2. Determination of the Transition Level is the responsibility of:'
   referenceImage: {fileID: 0}
-  explanationText: 
+  explanationText: The Approach Control office or Aerodrome Control Tower determines
+    the transition level according to the current atmospheric pressure and transition
+    altitude, ensuring appropriate vertical separation during departures and approaches.
   options:
   - The Authority of the State
   - The ATC Authority

@@ -14,7 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MCQQuestionData
   questionText: 3. What is the transition level?
   referenceImage: {fileID: 0}
-  explanationText: 
+  explanationText: The transition level is the lowest usable flight level above the
+    transition altitude. It ensures that aircraft using standard pressure settings
+    remain safely separated from aircraft using local altimeter settings.
   options:
   - The first available flight level above the transition altitude
   - The highest flight level available below the transition altitude

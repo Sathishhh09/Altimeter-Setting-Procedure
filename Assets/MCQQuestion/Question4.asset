@@ -15,7 +15,9 @@ MonoBehaviour:
   questionText: 4. When during the approach should the reported aerodrome altimeter
     setting be set?
   referenceImage: {fileID: 0}
-  explanationText: 
+  explanationText: During descent, the pilot changes from standard pressure setting
+    to the reported aerodrome QNH when passing the transition level, allowing altitude
+    to be correctly referenced to mean sea level.
   options:
   - When passing 3000 ft AMSL or 1000 ft AGL
   - When passing the transition level

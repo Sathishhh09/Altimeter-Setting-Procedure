@@ -15,7 +15,9 @@ MonoBehaviour:
   questionText: 6. In the vicinity of an aerodrome that is going to be used by the
     aircraft, the vertical position of the aircraft shall be expressed as
   referenceImage: {fileID: 0}
-  explanationText: 
+  explanationText: Below the transition altitude, QNH is used and vertical position
+    is expressed as altitude above mean sea level. This provides accurate terrain
+    and aerodrome elevation awareness.
   options:
   - Flight level at or below the transition level
   - Flight level at or below the transition altitude

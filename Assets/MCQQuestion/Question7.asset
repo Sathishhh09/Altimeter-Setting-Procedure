@@ -15,7 +15,9 @@ MonoBehaviour:
   questionText: 7. The pilot of a departing aircraft flying under IFR shall change
     the altimeter setting from QNH to SPS when passing
   referenceImage: {fileID: 0}
-  explanationText: 
+  explanationText: During an IFR departure, the aircraft changes from QNH to the
+    standard pressure setting when passing the transition altitude, allowing vertical
+    position to subsequently be expressed using flight levels.
   options:
   - Transition level
   - When specified by ATC

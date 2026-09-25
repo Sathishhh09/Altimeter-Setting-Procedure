@@ -15,7 +15,9 @@ MonoBehaviour:
   questionText: 9. During flight through the transition layer the vertical position
     of the aircraft should be reported as
   referenceImage: {fileID: 0}
-  explanationText: 
+  explanationText: During descent through the transition layer, aircraft transition
+    from flight levels to altitude. Therefore, vertical position is reported as altitude
+    above mean sea level using QNH.
   options:
   - altitude above mean sea level during the climb
   - flight level during descent

@@ -15,7 +15,9 @@ MonoBehaviour:
   questionText: '5. The vertical position of an aircraft at or below the transition
     altitude will be reported as:'
   referenceImage: {fileID: 0}
-  explanationText: 
+  explanationText: At or below the transition altitude, aircraft use the local QNH
+    pressure setting. Therefore, their vertical position is expressed as altitude
+    above mean sea level rather than flight level.
   options:
   - Flight level
   - Whatever the Pilot Chooses
