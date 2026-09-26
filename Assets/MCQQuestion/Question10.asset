@@ -12,15 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d01fd2d64a9249049aaa77d5c12a82fe, type: 3}
   m_Name: Question10
   m_EditorClassIdentifier: Assembly-CSharp::MCQQuestionData
-  questionText: 10. Whilst flying through the transition layer the vertical position
-    of the aircraft should be reported as
+  questionText: 10. Who is reponsible to check the serviceability/accuracy of the
+    altimeter?
   referenceImage: {fileID: 0}
-  explanationText: The transition layer contains both reference systems during transition.
-    The aircraft's reported vertical position depends on whether standard pressure
-    or the local QNH setting is being used.
+  explanationText: "The Pilot-in-command is responsible for ensuring the aircraft\u2019s
+    altimeter is serviceable and correctly functioning before flight. This includes
+    checking its indications and confirming appropriate altimeter settings are applied."
   options:
-  - Altitude
-  - Height
-  - Flight level
-  - it depends upon what is set on the altimeter
-  correctOptionIndex: 3
+  - Maintenance Engineer
+  - Pilot-in-command
+  - The Operator
+  - ATC
+  correctOptionIndex: 1
